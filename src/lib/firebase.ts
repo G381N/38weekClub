@@ -16,7 +16,7 @@ if (
     !firebaseConfig.authDomain ||
     !firebaseConfig.projectId
 ) {
-    throw new Error("Missing Firebase configuration. Please check your .env file.");
+    throw new Error("Missing Firebase configuration. Please check your .env.local file and ensure all NEXT_PUBLIC_ variables are set.");
 }
 
 
