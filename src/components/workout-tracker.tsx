@@ -30,17 +30,20 @@ const SetLoggerDialog = ({
     onOpenChange,
     onSave,
     stats,
+    onStartTimer
 }: {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     onSave: (set: Set) => void;
     stats: PerformanceStats;
+    onStartTimer: () => void;
 }) => {
     const [set, setSet] = useState<Set>({ reps: 8, weight: 20 });
 
     const handleSave = () => {
         onSave(set);
         onOpenChange(false);
+        onStartTimer();
     }
 
     return (
@@ -62,15 +65,15 @@ const SetLoggerDialog = ({
                 <div className="space-y-6 py-4">
                     <div className="space-y-2">
                         <Label className="flex justify-between items-center"><Repeat /> Reps <span className="text-2xl font-mono">{set.reps}</span></Label>
-                        <Slider value={[set.reps]} onValueChange={([val]) => set(s => ({ ...s, reps: val }))} min={1} max={30} step={1} />
+                        <Slider value={[set.reps]} onValueChange={([val]) => setSet(s => ({ ...s, reps: val }))} min={1} max={30} step={1} />
                     </div>
                     <div className="space-y-2">
                         <Label className="flex justify-between items-center"><Dumbbell /> Weight <span className="text-2xl font-mono">{set.weight} kg</span></Label>
-                        <Slider value={[set.weight]} onValueChange={([val]) => set(s => ({ ...s, weight: val }))} min={0} max={300} step={2.5} />
+                        <Slider value={[set.weight]} onValueChange={([val]) => setSet(s => ({ ...s, weight: val }))} min={0} max={300} step={2.5} />
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button onClick={handleSave} className="w-full text-lg forged-button">Log Set</Button>
+                    <Button onClick={handleSave} className="w-full text-lg forged-button">Log Set & Start Timer</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -128,7 +131,7 @@ const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) =
 };
 
 // --- MAIN COMPONENT ---
-export function WorkoutTracker() {
+export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
   const { toast } = useToast();
   const { logWorkout, startDate, disciplineMode, workouts } = useAppStore(state => ({
     logWorkout: state.logWorkout,
@@ -280,6 +283,7 @@ export function WorkoutTracker() {
             onOpenChange={() => setShowSetLogger(null)} 
             onSave={(set) => showSetLogger && handleAddSet(showSetLogger, set)}
             stats={performanceStats[showSetLogger || ''] || { personalBest: null, lastWeekBest: null }}
+            onStartTimer={onStartTimer}
         />
 
       <Card>

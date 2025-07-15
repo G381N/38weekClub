@@ -22,6 +22,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
                 setSeconds(s => s - 1);
             }, 1000);
         } else if (seconds === 0 && isOpen) {
+            // Optionally play a sound or close the dialog
             onOpenChange(false);
         }
         return () => {
@@ -31,7 +32,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
 
     useEffect(() => {
         if (isOpen) {
-            setSeconds(90); // Reset and start timer when opened
+            setSeconds(90); // Reset timer when opened
         }
     }, [isOpen]);
 
@@ -77,6 +78,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
     );
 }
 
+
 export function AppShell() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'workout' | 'food'>('dashboard');
   const [isTimerOpen, setTimerOpen] = useState(false);
@@ -87,7 +89,7 @@ export function AppShell() {
       case 'dashboard':
         return <Dashboard />;
       case 'workout':
-        return <WorkoutTracker />;
+        return <WorkoutTracker onStartTimer={() => setTimerOpen(true)} />;
       case 'food':
         return <MealTracker />;
       default:
@@ -109,9 +111,14 @@ export function AppShell() {
             <Logo className="w-8 h-8" />
             <h1 className="text-xl font-bold text-foreground ml-2 uppercase tracking-wider">38 Club</h1>
         </div>
-        <Button onClick={signOut} variant="ghost" size="icon">
-            <LogOut className="w-5 h-5 text-muted-foreground" />
-        </Button>
+        <div className="flex items-center gap-2">
+            <Button onClick={() => setTimerOpen(true)} variant="ghost" size="icon">
+                <Timer className="w-5 h-5 text-muted-foreground" />
+            </Button>
+            <Button onClick={signOut} variant="ghost" size="icon">
+                <LogOut className="w-5 h-5 text-muted-foreground" />
+            </Button>
+        </div>
       </header>
 
       <main className="flex-1 pb-20">
@@ -137,13 +144,6 @@ export function AppShell() {
                 </button>
             )
           })}
-           <button
-                onClick={() => setTimerOpen(true)}
-                className='flex flex-col items-center justify-center w-full h-full gap-1 transition-colors duration-200 text-muted-foreground hover:text-foreground'
-            >
-                <Timer className='w-6 h-6' />
-                <span className="text-xs font-medium">Rest Timer</span>
-            </button>
         </nav>
       </footer>
     </div>
