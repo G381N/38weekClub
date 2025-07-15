@@ -28,7 +28,7 @@ export type Workout = {
   timestamp: string;
   category: string;
   exercises: {
-    name: string;
+    name:string;
     sets: { reps: number; weight: number }[];
   }[];
   notes?: string;
@@ -39,6 +39,8 @@ export type Workout = {
 };
 
 export type AppState = {
+  isInitialized: boolean;
+  userId?: string;
   isOnboarded: boolean;
   disciplineMode: DisciplineMode;
   userMetrics: UserMetrics;
@@ -49,6 +51,8 @@ export type AppState = {
   startDate: string | null;
   
   // Actions
+  setUserId: (userId: string) => void;
+  _saveToFirestore: (data: Partial<AppState>) => void;
   completeOnboarding: (data: {
     metrics: UserMetrics;
     photos: PhysiquePhotos;

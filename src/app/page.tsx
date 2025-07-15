@@ -1,43 +1,54 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useAuth } from '@/lib/auth';
 import { useAppStore } from '@/lib/store';
 import { Onboarding } from '@/components/onboarding';
 import { AppShell } from '@/components/app-shell';
 import { CompletionScreen } from '@/components/completion-screen';
+import { Login } from '@/components/login';
 import { differenceInWeeks } from 'date-fns';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
-  const isOnboarded = useAppStore(state => state.isOnboarded);
-  const startDate = useAppStore(state => state.startDate);
-  const [isClient, setIsClient] = useState(false);
+    const { user, loading } = useAuth();
+    const { isOnboarded, startDate, setUserId, isInitialized } = useAppStore(state => ({
+        isOnboarded: state.isOnboarded,
+        startDate: state.startDate,
+        setUserId: state.setUserId,
+        isInitialized: state.isInitialized,
+    }));
+    
+    // Connect user to the store once authenticated
+    React.useEffect(() => {
+        if (user) {
+            setUserId(user.uid);
+        }
+    }, [user, setUserId]);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  const weeksCompleted = startDate ? differenceInWeeks(new Date(), new Date(startDate)) : 0;
-  const isComplete = weeksCompleted >= 38;
-
-  if (!isClient) {
-    return (
-        <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-background">
-            <div className="space-y-4 w-full max-w-sm">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-64 w-full" />
-                <Skeleton className="h-12 w-full" />
+    if (loading || (user && !isInitialized)) {
+        return (
+            <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-background">
+                <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                <p className="mt-4 text-muted-foreground">Forging Your Experience...</p>
             </div>
-        </div>
-    );
-  }
-
-  if (isOnboarded) {
-    if (isComplete) {
-      return <CompletionScreen />;
+        );
     }
-    return <AppShell />;
-  }
+    
+    if (!user) {
+        return <Login />;
+    }
 
-  return <Onboarding />;
+    if (!isOnboarded) {
+        return <Onboarding />;
+    }
+
+    const weeksCompleted = startDate ? differenceInWeeks(new Date(), new Date(startDate)) : 0;
+    const isComplete = weeksCompleted >= 38;
+
+    if (isComplete) {
+        return <CompletionScreen />;
+    }
+
+    return <AppShell />;
 }

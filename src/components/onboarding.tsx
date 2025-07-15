@@ -8,7 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Camera, Shield, ShieldCheck, User } from 'lucide-react';
+import { Camera, ShieldCheck, User } from 'lucide-react';
 import { Logo } from './icons/logo';
 
 const StepIndicator = ({ current, total }: { current: number; total: number }) => (
@@ -16,7 +16,7 @@ const StepIndicator = ({ current, total }: { current: number; total: number }) =
     {Array.from({ length: total }).map((_, i) => (
       <div
         key={i}
-        className={`h-2 w-12 rounded-full ${i + 1 <= current ? 'bg-primary' : 'bg-muted'}`}
+        className={`h-2 w-12 rounded-full transition-colors duration-300 ${i + 1 <= current ? 'bg-primary' : 'bg-muted'}`}
       />
     ))}
   </div>
@@ -35,9 +35,9 @@ const MetricsStep = ({ onNext }: { onNext: (data: { metrics: UserMetrics }) => v
   };
 
   return (
-    <Card className="w-full max-w-md bg-background/50 border-border">
+    <Card className="w-full max-w-md bg-transparent border-border animate-in fade-in-0 slide-in-from-bottom-10 duration-500">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><User /> Your Starting Point</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-2xl uppercase"><User /> Your Starting Point</CardTitle>
         <CardDescription>Enter your current stats to begin the journey.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -59,7 +59,7 @@ const MetricsStep = ({ onNext }: { onNext: (data: { metrics: UserMetrics }) => v
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={() => onNext({ metrics })} className="w-full">Next</Button>
+        <Button onClick={() => onNext({ metrics })} className="w-full text-lg forged-button">Next</Button>
       </CardFooter>
     </Card>
   );
@@ -67,9 +67,9 @@ const MetricsStep = ({ onNext }: { onNext: (data: { metrics: UserMetrics }) => v
 
 const PhotoStep = ({ onNext, onSkip }: { onNext: (data: { photos: PhysiquePhotos }) => void; onSkip: () => void }) => {
   return (
-    <Card className="w-full max-w-md bg-background/50 border-border">
+     <Card className="w-full max-w-md bg-transparent border-border animate-in fade-in-0 slide-in-from-bottom-10 duration-500">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Camera /> Physique Photos</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-2xl uppercase"><Camera /> Physique Photos</CardTitle>
         <CardDescription>Optional: Take 4 photos to document your start. This is for your eyes only.</CardDescription>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-4">
@@ -82,7 +82,7 @@ const PhotoStep = ({ onNext, onSkip }: { onNext: (data: { photos: PhysiquePhotos
       </CardContent>
       <CardFooter className="flex flex-col sm:flex-row gap-2">
         <Button onClick={onSkip} variant="outline" className="w-full">Skip</Button>
-        <Button onClick={() => onNext({ photos: {} })} className="w-full">Next</Button>
+        <Button onClick={() => onNext({ photos: {} })} className="w-full text-lg forged-button">Next</Button>
       </CardFooter>
     </Card>
   );
@@ -92,31 +92,31 @@ const ModeStep = ({ onNext }: { onNext: (data: { mode: DisciplineMode }) => void
   const [mode, setMode] = useState<DisciplineMode>('normal');
 
   return (
-    <Card className="w-full max-w-md bg-background/50 border-border">
+    <Card className="w-full max-w-md bg-transparent border-border animate-in fade-in-0 slide-in-from-bottom-10 duration-500">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><ShieldCheck /> Choose Your Path</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-2xl uppercase"><ShieldCheck /> Choose Your Path</CardTitle>
         <CardDescription>This choice is permanent and defines your journey.</CardDescription>
       </CardHeader>
       <CardContent>
         <RadioGroup value={mode} onValueChange={(value) => setMode(value as DisciplineMode)} className="space-y-4">
-          <Label htmlFor="normal-mode" className="flex items-start gap-4 p-4 rounded-md border border-border has-[input:checked]:border-primary transition-all cursor-pointer">
+          <Label htmlFor="normal-mode" className="flex items-start gap-4 p-4 rounded-md border-2 border-border has-[input:checked]:border-primary transition-all cursor-pointer bg-secondary/20">
             <RadioGroupItem value="normal" id="normal-mode" />
             <div className="grid gap-1.5">
-              <p className="font-semibold">Normal Mode</p>
+              <p className="font-semibold text-lg">NORMAL MODE</p>
               <p className="text-sm text-muted-foreground">Workout 4 days/week. Extra workouts grant rollover rest days.</p>
             </div>
           </Label>
-          <Label htmlFor="intense-mode" className="flex items-start gap-4 p-4 rounded-md border border-destructive has-[input:checked]:border-primary has-[input:checked]:bg-destructive/10 transition-all cursor-pointer">
+          <Label htmlFor="intense-mode" className="flex items-start gap-4 p-4 rounded-md border-2 border-destructive/50 has-[input:checked]:border-primary has-[input:checked]:bg-destructive/10 transition-all cursor-pointer bg-secondary/20">
             <RadioGroupItem value="intense" id="intense-mode" />
             <div className="grid gap-1.5">
-               <p className="font-semibold text-destructive-foreground">Intense Mode</p>
+               <p className="font-semibold text-lg text-destructive-foreground">INTENSE MODE</p>
                <p className="text-sm text-muted-foreground">Workout 4 days/week without fail. Missing a single week resets your entire 38-week streak.</p>
             </div>
           </Label>
         </RadioGroup>
       </CardContent>
       <CardFooter>
-        <Button onClick={() => onNext({ mode })} className="w-full">Begin Transformation</Button>
+        <Button onClick={() => onNext({ mode })} className="w-full text-lg forged-button">Begin Transformation</Button>
       </CardFooter>
     </Card>
   );
@@ -143,18 +143,20 @@ export function Onboarding() {
 
   const handleFinish = (data: { mode: DisciplineMode }) => {
     const finalData = { ...onboardingData, ...data };
-    completeOnboarding({
-      metrics: finalData.metrics!,
-      photos: finalData.photos!,
-      mode: finalData.mode!,
-    });
+    if (finalData.metrics && finalData.mode) {
+      completeOnboarding({
+        metrics: finalData.metrics,
+        photos: finalData.photos || {},
+        mode: finalData.mode,
+      });
+    }
   };
   
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-background font-headline">
        <div className="flex flex-col items-center text-center mb-8">
-        <Logo />
-        <h1 className="text-4xl font-bold text-foreground mt-4">38 Club</h1>
+        <Logo className="w-20 h-20" />
+        <h1 className="text-5xl font-bold text-foreground mt-4 uppercase">38 Club</h1>
         <p className="text-muted-foreground">You are about to be reborn.</p>
       </div>
 
