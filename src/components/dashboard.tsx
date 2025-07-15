@@ -4,10 +4,9 @@
 import React, { useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Flame, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
+import { ShieldAlert, CheckCircle } from 'lucide-react';
 import { motivationalQuotes, workoutCategories } from '@/lib/data';
-import { differenceInWeeks, startOfWeek, differenceInDays } from 'date-fns';
+import { differenceInWeeks, startOfWeek } from 'date-fns';
 
 export function Dashboard() {
   const { disciplineMode, startDate, workouts } = useAppStore(state => ({
@@ -16,35 +15,47 @@ export function Dashboard() {
     workouts: state.workouts,
   }));
 
-  const { weeksCompleted, disciplineStreak, workoutsThisWeek } = useMemo(() => {
-    if (!startDate) return { weeksCompleted: 0, disciplineStreak: 0, workoutsThisWeek: new Set() };
-    
+  const {
+    weeksCompleted,
+    disciplineStreak,
+    workoutsThisWeek,
+    nextWorkoutCategory,
+  } = useMemo(() => {
+    if (!startDate) {
+      return {
+        weeksCompleted: 0,
+        disciplineStreak: 0,
+        workoutsThisWeek: new Set(),
+        nextWorkoutCategory: workoutCategories[0],
+      };
+    }
+
     const start = new Date(startDate);
     const now = new Date();
-    
+
     const weeksCompleted = differenceInWeeks(now, start);
 
-    const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
+    // Calculate streak based on full 4-workout weeks completed
+    const disciplineStreak = Math.floor(workouts.length / 4);
 
+    const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });
     const recentWorkouts = workouts.filter(w => new Date(w.timestamp) >= currentWeekStart);
     const workoutsThisWeekSet = new Set(recentWorkouts.map(w => w.category));
-    
-    // NOTE: Discipline streak logic would be more complex, involving checking every past week.
-    // For this demo, we'll equate it to weeks completed.
-    const disciplineStreak = weeksCompleted;
 
-    return { weeksCompleted, disciplineStreak, workoutsThisWeek: workoutsThisWeekSet };
+    // Determine the next workout based on completion history
+    const totalWorkoutsCompleted = workouts.length;
+    const nextWorkoutIndex = totalWorkoutsCompleted % workoutCategories.length;
+    const nextWorkoutCategory = workoutCategories[nextWorkoutIndex];
+
+    return {
+      weeksCompleted,
+      disciplineStreak,
+      workoutsThisWeek: workoutsThisWeekSet,
+      nextWorkoutCategory,
+    };
   }, [startDate, workouts]);
 
   const dailyQuote = useMemo(() => motivationalQuotes[new Date().getDate() % motivationalQuotes.length], []);
-  
-  const getTodaysWorkoutCategory = () => {
-    if (!startDate) return null;
-    const dayIndex = differenceInDays(new Date(), new Date(startDate)) % 4; // Cycle through 4 workout days
-    return workoutCategories[dayIndex];
-  };
-
-  const todaysCategory = getTodaysWorkoutCategory();
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
@@ -73,7 +84,7 @@ export function Dashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Today's Target: {todaysCategory ? todaysCategory.name : 'Rest Day'}</CardTitle>
+          <CardTitle>Today's Target: {nextWorkoutCategory.name}</CardTitle>
           <CardDescription>Focus. Execute. Overcome.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">

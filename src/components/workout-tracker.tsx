@@ -13,8 +13,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { workoutCategories, exercises, type WorkoutCategoryId } from '@/lib/data';
 import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, Repeat, History, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { differenceInDays, isToday, parseISO, subDays } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
+import { isToday, parseISO, subDays, differenceInWeeks } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 
 type Set = { reps: number; weight: number };
 type ExerciseLog = { name: string; sets: Set[] };
@@ -145,33 +145,39 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
   const [showSetLogger, setShowSetLogger] = useState<string | null>(null);
 
   const { todaysWorkout, dayOfProgram, weekOfProgram, isCompletedToday } = useMemo(() => {
-    if (!startDate) return { todaysWorkout: null, dayOfProgram: 0, weekOfProgram: 0, isCompletedToday: false };
-    
-    const start = new Date(startDate);
-    const today = new Date();
-    
-    const dayIndex = differenceInDays(today, start);
-    const weekIndex = Math.floor(dayIndex / 7) + 1;
-
-    const lastWorkoutToday = workouts.filter(w => isToday(parseISO(w.timestamp))).pop();
-
-    let category: WorkoutCategoryId | null = null;
-    if (disciplineMode === 'intense') {
-        const dayOfWeek = today.getDay(); // Sunday is 0, Monday is 1
-        const intenseDayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday is 0
-        if(intenseDayIndex < 4) { // Only workout Mon-Thu
-             category = workoutCategories[intenseDayIndex].id;
-        }
-    } else {
-        const workoutDayIndex = dayIndex % 4; // Cycle through 4 workout days
-        category = workoutCategories[workoutDayIndex].id;
+    if (!startDate) {
+        return { 
+            todaysWorkout: null, 
+            dayOfProgram: 0, 
+            weekOfProgram: 0, 
+            isCompletedToday: false 
+        };
     }
+    
+    // Determine the next workout based on completion history, not the calendar
+    const totalWorkoutsCompleted = workouts.length;
+    const nextWorkoutIndex = totalWorkoutsCompleted % workoutCategories.length;
+    const nextCategory = workoutCategories[nextWorkoutIndex];
+    
+    // Check if the *next required* workout has been done today
+    const lastWorkoutForCategory = workouts.filter(w => w.category === nextCategory.id).sort((a,b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()).shift();
+    const isCompletedToday = lastWorkoutForCategory ? isToday(parseISO(lastWorkoutForCategory.timestamp)) : false;
 
+    // Day of program and week of program remain calendar-based for progress tracking
+    const dayOfProgram = differenceInWeeks(new Date(), new Date(startDate)) * 7 + (new Date().getDay() || 7);
+    const weekOfProgram = differenceInWeeks(new Date(), new Date(startDate)) + 1;
+
+    const workoutDefinition = {
+        id: nextCategory.id,
+        name: nextCategory.name,
+        exercises: exercises[nextCategory.id]
+    };
+    
     return {
-        todaysWorkout: category ? { id: category, exercises: exercises[category] } : null,
-        dayOfProgram: dayIndex + 1,
-        weekOfProgram: weekIndex,
-        isCompletedToday: !!lastWorkoutToday
+        todaysWorkout: workoutDefinition,
+        dayOfProgram,
+        weekOfProgram,
+        isCompletedToday: isCompletedToday,
     };
   }, [startDate, workouts, disciplineMode]);
 
@@ -288,7 +294,7 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
 
       <Card>
         <CardHeader>
-            <CardTitle className="text-2xl text-accent">{todaysWorkout.id.replace(/_/g, ' & ').toUpperCase()}</CardTitle>
+            <CardTitle className="text-2xl text-accent">{todaysWorkout.name}</CardTitle>
             <CardDescription>Day {dayOfProgram} of the Rebirth. Do not fail.</CardDescription>
         </CardHeader>
         <CardContent>
