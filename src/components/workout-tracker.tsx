@@ -14,7 +14,7 @@ import { workoutCategories, exercises, type WorkoutCategoryId } from '@/lib/data
 import { BrainCircuit, HeartPulse, Shield, TimerIcon, Plus, Trash2, CheckCircle, Flame } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInDays, isToday, parseISO } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 
 type Set = { reps: number; weight: number };
 type ExerciseLog = { name: string; sets: Set[] };
@@ -103,6 +103,57 @@ const RestTimer = () => {
     );
 }
 
+const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) => void; onOpenChange: (open: boolean) => void; open: boolean }) => {
+    const [sickButConsistent, setSickButConsistent] = useState(false);
+    const [beastState, setBeastState] = useState({ mood: 5, painLevel: 1, mentalDiscipline: 5 });
+    const [notes, setNotes] = useState("");
+
+    const handleSave = () => {
+        onSave({ sickButConsistent, ...beastState, notes });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Finalize Session</DialogTitle>
+                    <DialogDescription>Log the details of your mental and physical state.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                    <div className="flex items-center justify-between p-3 rounded-md bg-secondary/30">
+                        <Label htmlFor="sick-mode" className="flex flex-col gap-1.5 cursor-pointer">
+                            <span>Sick But Consistent</span>
+                            <span className="font-normal text-xs text-muted-foreground">For training under stress or illness.</span>
+                        </Label>
+                        <Switch id="sick-mode" checked={sickButConsistent} onCheckedChange={setSickButConsistent} />
+                    </div>
+                    <Textarea placeholder="Optional notes on your session..." value={notes} onChange={(e) => setNotes(e.target.value)} />
+                    
+                    <div className="space-y-6">
+                        <h4 className="font-semibold text-center">Beast-State Metrics</h4>
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-2"><HeartPulse /> Mood: {beastState.mood}/10</Label>
+                            <Slider value={[beastState.mood]} onValueChange={([val]) => setBeastState(s => ({ ...s, mood: val }))} min={1} max={10} step={1} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-2"><Shield /> Pain Level (Good Pain): {beastState.painLevel}/10</Label>
+                            <Slider value={[beastState.painLevel]} onValueChange={([val]) => setBeastState(s => ({ ...s, painLevel: val }))} min={1} max={10} step={1} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="flex items-center gap-2"><BrainCircuit /> Mental Discipline: {beastState.mentalDiscipline}/10</Label>
+                            <Slider value={[beastState.mentalDiscipline]} onValueChange={([val]) => setBeastState(s => ({ ...s, mentalDiscipline: val }))} min={1} max={10} step={1} />
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={handleSave} className="w-full text-lg forged-button">Forge Session</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
 export function WorkoutTracker() {
   const { toast } = useToast();
   const { logWorkout, startDate, disciplineMode, workouts } = useAppStore(state => ({
@@ -113,10 +164,8 @@ export function WorkoutTracker() {
   }));
 
   const [sessionLog, setSessionLog] = useState<Record<string, ExerciseLog>>({});
-  const [sickButConsistent, setSickButConsistent] = useState(false);
-  const [beastState, setBeastState] = useState({ mood: 5, painLevel: 1, mentalDiscipline: 5 });
-  const [notes, setNotes] = useState("");
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showMetricsModal, setShowMetricsModal] = useState(false);
 
   const { todaysWorkout, dayOfProgram, weekOfProgram, isCompletedToday } = useMemo(() => {
     if (!startDate) return { todaysWorkout: null, dayOfProgram: 0, weekOfProgram: 0, isCompletedToday: false };
@@ -126,7 +175,6 @@ export function WorkoutTracker() {
     
     const dayIndex = differenceInDays(today, start);
     const weekIndex = Math.floor(dayIndex / 7) + 1;
-    const dayOfWeekIndex = (dayIndex % 7) + 1;
 
     const lastWorkoutToday = workouts.filter(w => isToday(parseISO(w.timestamp))).pop();
 
@@ -189,24 +237,27 @@ export function WorkoutTracker() {
     return allSetsCompleted;
   }, [sessionLog, todaysWorkout]);
 
-  const handleSaveWorkout = () => {
+  const handleOpenMetricsModal = () => {
     if (!todaysWorkout || !isSessionComplete) {
       toast({ title: "Incomplete Workout", description: "You must log at least 4 sets for every exercise to complete the session.", variant: "destructive" });
       return;
     }
+    setShowMetricsModal(true);
+  };
+  
+  const handleSaveWorkout = (details: any) => {
+    if (!todaysWorkout) return;
 
     const exercisesInSession = Object.values(sessionLog).filter(ex => ex.sets.length > 0);
 
     logWorkout({
         category: todaysWorkout.id,
         exercises: exercisesInSession,
-        sickButConsistent,
-        ...beastState,
-        notes,
+        ...details
     });
+    setShowMetricsModal(false);
     setShowCompletionModal(true);
     setSessionLog({});
-    setNotes("");
   };
 
   if (!todaysWorkout) {
@@ -246,6 +297,8 @@ export function WorkoutTracker() {
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
+        <MetricsModal open={showMetricsModal} onOpenChange={setShowMetricsModal} onSave={handleSaveWorkout} />
+        
         <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
             <DialogContent>
                 <DialogHeader>
@@ -292,44 +345,8 @@ export function WorkoutTracker() {
       </Card>
       
       <RestTimer />
-
-      <Card>
-          <CardHeader>
-              <CardTitle>Session Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-2 rounded-md bg-secondary/30">
-                <Label htmlFor="sick-mode" className="flex flex-col gap-1.5 cursor-pointer">
-                    <span>Sick But Consistent</span>
-                    <span className="font-normal text-xs text-muted-foreground">For training under stress or illness.</span>
-                </Label>
-                <Switch id="sick-mode" checked={sickButConsistent} onCheckedChange={setSickButConsistent} />
-              </div>
-              <Textarea placeholder="Optional notes on your session..." value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </CardContent>
-      </Card>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Beast-State Metrics</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2"><HeartPulse /> Mood: {beastState.mood}/10</Label>
-            <Slider value={[beastState.mood]} onValueChange={([val]) => setBeastState(s => ({ ...s, mood: val }))} min={1} max={10} step={1} />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2"><Shield /> Pain Level (Good Pain): {beastState.painLevel}/10</Label>
-            <Slider value={[beastState.painLevel]} onValueChange={([val]) => setBeastState(s => ({ ...s, painLevel: val }))} min={1} max={10} step={1} />
-          </div>
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2"><BrainCircuit /> Mental Discipline: {beastState.mentalDiscipline}/10</Label>
-            <Slider value={[beastState.mentalDiscipline]} onValueChange={([val]) => setBeastState(s => ({ ...s, mentalDiscipline: val }))} min={1} max={10} step={1} />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Button onClick={handleSaveWorkout} disabled={!isSessionComplete} className="w-full text-lg py-6 forged-button">
+      <Button onClick={handleOpenMetricsModal} disabled={!isSessionComplete} className="w-full text-lg py-6 forged-button">
         {isSessionComplete ? "COMPLETE SESSION" : "WORK IS NOT DONE"}
       </Button>
     </div>
