@@ -1,16 +1,18 @@
+
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import Image from 'next/image';
 import { useAppStore } from '@/lib/store';
 import { analyzeFoodImage, type AnalyzeFoodImageOutput } from '@/ai/flows/analyze-food-image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, Loader2, BrainCircuit, Flame, Drumstick, Wheat, Droplets } from 'lucide-react';
+import { Upload, Loader2, BrainCircuit, Flame, Drumstick, Wheat, Droplets, Target } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Meal } from '@/lib/types';
+import { isToday, parseISO } from 'date-fns';
 
 const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -41,7 +43,7 @@ const MealLogItem = ({ meal }: { meal: Meal }) => (
         <Image src={meal.photoDataUri} alt="Meal" width={64} height={64} className="rounded-md object-cover w-16 h-16" />
         <div className="flex-1 text-sm">
             <p className="font-bold">{meal.summary}</p>
-            <p className="text-xs text-muted-foreground">{new Date(meal.timestamp).toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground">{new Date(meal.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             <div className="flex gap-4 mt-1 text-xs">
                 <span>🔥{meal.calories.toFixed(0)}</span>
                 <span>🍗{meal.protein.toFixed(0)}g</span>
@@ -52,8 +54,45 @@ const MealLogItem = ({ meal }: { meal: Meal }) => (
     </div>
 );
 
+const DailyTotalsCard = ({ totals }: { totals: { calories: number; protein: number; carbs: number; fat: number } }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Target /> Today's Totals</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/30">
+                <Flame className="w-5 h-5 text-accent" />
+                <div>
+                    <p className="font-bold text-lg">{totals.calories.toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground">Calories</p>
+                </div>
+            </div>
+             <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/30">
+                <Drumstick className="w-5 h-5 text-accent" />
+                <div>
+                    <p className="font-bold text-lg">{totals.protein.toFixed(1)}g</p>
+                    <p className="text-xs text-muted-foreground">Protein</p>
+                </div>
+            </div>
+             <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/30">
+                <Wheat className="w-5 h-5 text-accent" />
+                <div>
+                    <p className="font-bold text-lg">{totals.carbs.toFixed(1)}g</p>
+                    <p className="text-xs text-muted-foreground">Carbs</p>
+                </div>
+            </div>
+             <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/30">
+                <Droplets className="w-5 h-5 text-accent" />
+                <div>
+                    <p className="font-bold text-lg">{totals.fat.toFixed(1)}g</p>
+                    <p className="text-xs text-muted-foreground">Fat</p>
+                </div>
+            </div>
+        </CardContent>
+    </Card>
+);
 
-export function FoodVision() {
+export function MealTracker() {
     const { toast } = useToast();
     const { meals, logMeal } = useAppStore(state => ({ meals: state.meals, logMeal: state.logMeal }));
     const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
@@ -61,6 +100,22 @@ export function FoodVision() {
     const [isLoading, setIsLoading] = useState(false);
     const [result, setResult] = useState<AnalyzeFoodImageOutput | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const dailyTotals = useMemo(() => {
+        const todaysMeals = meals.filter(meal => isToday(parseISO(meal.timestamp)));
+        return todaysMeals.reduce((acc, meal) => ({
+            calories: acc.calories + meal.calories,
+            protein: acc.protein + meal.protein,
+            carbs: acc.carbs + meal.carbs,
+            fat: acc.fat + meal.fat,
+        }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+    }, [meals]);
+    
+    const todaysLoggedMeals = useMemo(() => {
+        return meals
+            .filter(meal => isToday(parseISO(meal.timestamp)))
+            .sort((a, b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime());
+    }, [meals]);
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -83,6 +138,8 @@ export function FoodVision() {
             setResult(analysisResult);
             logMeal({ ...analysisResult, notes, photoDataUri });
             toast({ title: 'Meal Analyzed', description: 'Nutritional estimates have been logged.' });
+            setPhotoDataUri(null); // Reset photo after analysis
+            setNotes(''); // Reset notes
         } catch (error) {
             console.error('AI analysis failed:', error);
             toast({ title: 'Analysis Failed', description: 'Could not analyze the image. Please try again.', variant: 'destructive' });
@@ -93,10 +150,13 @@ export function FoodVision() {
 
     return (
         <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
+
+            <DailyTotalsCard totals={dailyTotals} />
+
             <Card className="w-full">
                 <CardHeader>
-                    <CardTitle>Food Vision Tracker</CardTitle>
-                    <CardDescription>Scan a meal with your camera to estimate its nutritional content.</CardDescription>
+                    <CardTitle>Log a Meal</CardTitle>
+                    <CardDescription>Scan a meal to add it to your daily log.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div 
@@ -127,7 +187,7 @@ export function FoodVision() {
                 </CardContent>
                 <CardFooter>
                     <Button onClick={handleAnalyze} disabled={isLoading || !photoDataUri} className="w-full">
-                        {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...</> : 'Analyze Meal'}
+                        {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...</> : 'Analyze & Log Meal'}
                     </Button>
                 </CardFooter>
             </Card>
@@ -143,12 +203,12 @@ export function FoodVision() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Recent Meals</CardTitle>
+                    <CardTitle>Today's Log</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-72">
                         <div className="space-y-4">
-                            {meals.length > 0 ? meals.map(meal => <MealLogItem key={meal.id} meal={meal} />) : <p className="text-muted-foreground text-center">No meals logged yet.</p>}
+                            {todaysLoggedMeals.length > 0 ? todaysLoggedMeals.map(meal => <MealLogItem key={meal.id} meal={meal} />) : <p className="text-muted-foreground text-center">No meals logged today.</p>}
                         </div>
                     </ScrollArea>
                 </CardContent>

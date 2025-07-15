@@ -5,7 +5,7 @@ import { LayoutDashboard, Dumbbell, Bot, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dashboard } from './dashboard';
 import { WorkoutTracker } from './workout-tracker';
-import { FoodVision } from './food-vision';
+import { MealTracker } from './meal-tracker';
 import { Logo } from './icons/logo';
 import { useAuth } from '@/lib/auth';
 import { Button } from './ui/button';
@@ -23,7 +23,7 @@ export function AppShell() {
       case 'workout':
         return <WorkoutTracker />;
       case 'food':
-        return <FoodVision />;
+        return <MealTracker />;
       default:
         return <Dashboard />;
     }
@@ -32,7 +32,7 @@ export function AppShell() {
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'workout', icon: Dumbbell, label: 'Workout' },
-    { id: 'food', icon: Bot, label: 'Food Vision' },
+    { id: 'food', icon: Bot, label: 'Meal Tracker' },
   ];
 
   return (
