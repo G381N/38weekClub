@@ -15,8 +15,9 @@ import { motivationalQuotes } from '@/lib/data';
 
 const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
     const [seconds, setSeconds] = useState(90);
-    const [quote, setQuote] = useState('');
+    const [quoteIndex, setQuoteIndex] = useState(0);
 
+    // Main timer countdown logic
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isOpen && seconds > 0) {
@@ -31,12 +32,28 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
         };
     }, [isOpen, seconds, onOpenChange]);
 
+    // Quote cycling logic
+    useEffect(() => {
+        let quoteInterval: NodeJS.Timeout | null = null;
+        if (isOpen) {
+            quoteInterval = setInterval(() => {
+                setQuoteIndex(prevIndex => (prevIndex + 1) % motivationalQuotes.length);
+            }, 5000); // Change quote every 5 seconds
+        }
+        return () => {
+            if (quoteInterval) clearInterval(quoteInterval);
+        };
+    }, [isOpen]);
+
+    // Reset timer and quote when dialog is opened
     useEffect(() => {
         if (isOpen) {
-            setSeconds(90); // Reset timer when opened
-            setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
+            setSeconds(90); 
+            setQuoteIndex(Math.floor(Math.random() * motivationalQuotes.length));
         }
     }, [isOpen]);
+
+    const { quote, author } = motivationalQuotes[quoteIndex];
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -48,7 +65,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
                     <div className="relative h-40 w-40">
                         <svg className="h-full w-full" viewBox="0 0 100 100">
                             <circle
-                                className="stroke-current text-muted"
+                                className="stroke-current text-muted/20"
                                 strokeWidth="7"
                                 cx="50"
                                 cy="50"
@@ -68,13 +85,16 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
                             ></circle>
                         </svg>
                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-4xl font-bold font-mono text-foreground">
+                            <span className="text-4xl font-bold font-mono text-foreground animate-pulse">
                                 {String(Math.floor(seconds / 60)).padStart(2, '0')}:
                                 {String(seconds % 60).padStart(2, '0')}
                             </span>
                         </div>
                     </div>
-                    <p className="text-center text-muted-foreground italic text-sm">"{quote}"</p>
+                    <div className="text-center h-20 flex flex-col justify-center items-center">
+                         <p className="text-muted-foreground italic text-sm transition-opacity duration-500">"{quote}"</p>
+                         <p className="text-xs text-primary font-semibold mt-1 transition-opacity duration-500">- {author}</p>
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>

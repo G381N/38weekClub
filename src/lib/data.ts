@@ -1,18 +1,20 @@
 
 export const motivationalQuotes = [
-  "The only person you are destined to become is the person you decide to be.",
-  "Discipline is the bridge between goals and accomplishment.",
-  "Everybody wants to be a beast, until it's time to do what real beasts do.",
-  "Stay hard!",
-  "The pain you feel today will be the strength you feel tomorrow.",
-  "You don't have to be extreme, just consistent.",
-  "It does not matter how slowly you go as long as you do not stop.",
-  "Light weight, baby! - Ronnie Coleman",
-  "Yeah buddy! - Ronnie Coleman",
-  "You don't know me, son! - David Goggins",
-  "Don't stop when you're tired. Stop when you're done. - David Goggins",
-  "The obsession to be the best is a sickness. - Tom Platz",
-  "Suffer the pain of discipline or suffer the pain of regret.",
+  { quote: "The only person you are destined to become is the person you decide to be.", author: "Ralph Waldo Emerson" },
+  { quote: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+  { quote: "Everybody wants to be a beast, until it's time to do what real beasts do.", author: "Eric Thomas" },
+  { quote: "Stay hard!", author: "David Goggins" },
+  { quote: "The pain you feel today will be the strength you feel tomorrow.", author: "Unknown" },
+  { quote: "You don't have to be extreme, just consistent.", author: "Unknown" },
+  { quote: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+  { quote: "Light weight, baby!", author: "Ronnie Coleman" },
+  { quote: "Yeah buddy!", author: "Ronnie Coleman" },
+  { quote: "You don't know me, son!", author: "David Goggins" },
+  { quote: "Don't stop when you're tired. Stop when you're done.", author: "David Goggins" },
+  { quote: "The obsession to be the best is a sickness.", author: "Tom Platz" },
+  { quote: "Suffer the pain of discipline or suffer the pain of regret.", author: "Jim Rohn" },
+  { quote: "I'll be back.", author: "Arnold Schwarzenegger"},
+  { quote: "The last three or four reps is what makes the muscle grow.", author: "Arnold Schwarzenegger"},
 ];
 
 export const workoutCategories = [
