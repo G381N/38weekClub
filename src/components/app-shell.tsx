@@ -11,9 +11,11 @@ import { Logo } from './icons/logo';
 import { useAuth } from '@/lib/auth';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { motivationalQuotes } from '@/lib/data';
 
 const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
     const [seconds, setSeconds] = useState(90);
+    const [quote, setQuote] = useState('');
 
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
@@ -22,7 +24,6 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
                 setSeconds(s => s - 1);
             }, 1000);
         } else if (seconds === 0 && isOpen) {
-            // Optionally play a sound or close the dialog
             onOpenChange(false);
         }
         return () => {
@@ -33,6 +34,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
     useEffect(() => {
         if (isOpen) {
             setSeconds(90); // Reset timer when opened
+            setQuote(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)]);
         }
     }, [isOpen]);
 
@@ -42,7 +44,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
                 <DialogHeader>
                     <DialogTitle className="text-center text-accent">Rest Timer</DialogTitle>
                 </DialogHeader>
-                <div className="flex flex-col items-center justify-center p-8">
+                <div className="flex flex-col items-center justify-center p-8 gap-6">
                     <div className="relative h-40 w-40">
                         <svg className="h-full w-full" viewBox="0 0 100 100">
                             <circle
@@ -72,6 +74,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
                             </span>
                         </div>
                     </div>
+                    <p className="text-center text-muted-foreground italic text-sm">"{quote}"</p>
                 </div>
             </DialogContent>
         </Dialog>

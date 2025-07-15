@@ -5,7 +5,7 @@ import React, { useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ShieldAlert, CheckCircle } from 'lucide-react';
-import { motivationalQuotes, workoutCategories } from '@/lib/data';
+import { workoutCategories } from '@/lib/data';
 import { differenceInWeeks, startOfWeek } from 'date-fns';
 
 export function Dashboard() {
@@ -55,8 +55,6 @@ export function Dashboard() {
     };
   }, [startDate, workouts]);
 
-  const dailyQuote = useMemo(() => motivationalQuotes[new Date().getDate() % motivationalQuotes.length], []);
-
   return (
     <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
       
@@ -101,11 +99,6 @@ export function Dashboard() {
         </CardContent>
       </Card>
 
-      <Card className="bg-card border-border italic">
-        <CardContent className="p-4">
-          <p className="text-center text-muted-foreground">"{dailyQuote}"</p>
-        </CardContent>
-      </Card>
     </div>
   );
 }
