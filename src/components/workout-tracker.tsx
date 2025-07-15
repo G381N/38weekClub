@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -11,97 +11,71 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { workoutCategories, exercises, type WorkoutCategoryId } from '@/lib/data';
-import { BrainCircuit, HeartPulse, Shield, TimerIcon, Plus, Trash2, CheckCircle, Flame } from 'lucide-react';
+import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, Repeat, History, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { differenceInDays, isToday, parseISO } from 'date-fns';
+import { differenceInDays, isToday, parseISO, subDays } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 
 type Set = { reps: number; weight: number };
 type ExerciseLog = { name: string; sets: Set[] };
-type PreviousPerformance = { reps: number, weight: number } | null;
-
-const SetTracker = ({ exercise, onUpdate, previousPerformance }: { exercise: ExerciseLog; onUpdate: (sets: Set[]) => void; previousPerformance: PreviousPerformance }) => {
-  const addSet = () => onUpdate([...exercise.sets, { reps: 8, weight: 20 }]);
-  const removeSet = (index: number) => onUpdate(exercise.sets.filter((_, i) => i !== index));
-  const updateSet = (index: number, newSet: Set) => {
-    const newSets = [...exercise.sets];
-    newSets[index] = newSet;
-    onUpdate(newSets);
-  };
-
-  return (
-    <div className="space-y-4">
-        {previousPerformance && (
-            <div className="text-xs text-center text-muted-foreground p-2 bg-background rounded-md">
-                Last time: {previousPerformance.weight} kg x {previousPerformance.reps} reps
-            </div>
-        )}
-      {exercise.sets.map((set, index) => (
-        <div key={index} className="p-3 rounded-md bg-secondary/50 space-y-3 relative">
-          <h4 className="font-semibold text-foreground">Set {index + 1}</h4>
-          <div className="space-y-2">
-            <Label>Reps: {set.reps}</Label>
-            <Slider value={[set.reps]} onValueChange={([val]) => updateSet(index, { ...set, reps: val })} min={1} max={30} step={1} />
-          </div>
-          <div className="space-y-2">
-            <Label>Weight: {set.weight} kg</Label>
-            <Slider value={[set.weight]} onValueChange={([val]) => updateSet(index, { ...set, weight: val })} min={0} max={300} step={2.5} />
-          </div>
-          {exercise.sets.length > 1 && (
-             <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removeSet(index)}>
-                <Trash2 className="w-4 h-4 text-destructive" />
-             </Button>
-          )}
-        </div>
-      ))}
-      <Button onClick={addSet} variant="outline" className="w-full"><Plus className="mr-2 h-4 w-4" /> Add Set</Button>
-    </div>
-  );
+type PerformanceStats = {
+    personalBest: Set | null;
+    lastWeekBest: Set | null;
 };
 
-const RestTimer = () => {
-    const [seconds, setSeconds] = useState(60);
-    const [isActive, setIsActive] = useState(false);
+// --- DIALOGS ---
 
-    useEffect(() => {
-        let interval: NodeJS.Timeout | null = null;
-        if (isActive && seconds > 0) {
-            interval = setInterval(() => {
-                setSeconds(s => s - 1);
-            }, 1000);
-        } else if (seconds === 0) {
-            setIsActive(false);
-            // Optional: Play a sound
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isActive, seconds]);
+const SetLoggerDialog = ({
+    isOpen,
+    onOpenChange,
+    onSave,
+    stats,
+}: {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    onSave: (set: Set) => void;
+    stats: PerformanceStats;
+}) => {
+    const [set, setSet] = useState<Set>({ reps: 8, weight: 20 });
 
-    const toggle = () => setIsActive(!isActive);
-    const reset = () => {
-        setIsActive(false);
-        setSeconds(60);
+    const handleSave = () => {
+        onSave(set);
+        onOpenChange(false);
     }
 
     return (
-        <Card>
-            <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <TimerIcon className="text-accent" />
-                    <span className="text-lg font-mono text-foreground">
-                       {String(Math.floor(seconds / 60)).padStart(2, '0')}:
-                       {String(seconds % 60).padStart(2, '0')}
-                    </span>
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2"><Dumbbell /> Log Your Set</DialogTitle>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-4 my-4 text-center">
+                    <div className="p-2 bg-secondary/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground font-bold flex items-center justify-center gap-1"><Award /> PB</p>
+                        <p className="font-mono text-lg">{stats.personalBest ? `${stats.personalBest.weight}kg x ${stats.personalBest.reps}` : 'N/A'}</p>
+                    </div>
+                     <div className="p-2 bg-secondary/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground font-bold flex items-center justify-center gap-1"><History /> Last Week</p>
+                        <p className="font-mono text-lg">{stats.lastWeekBest ? `${stats.lastWeekBest.weight}kg x ${stats.lastWeekBest.reps}` : 'N/A'}</p>
+                    </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button onClick={toggle} variant={isActive ? "destructive" : "default"} size="sm" className="forged-button">{isActive ? 'Pause' : 'Start'}</Button>
-                    <Button onClick={reset} variant="outline" size="sm">Reset</Button>
+                <div className="space-y-6 py-4">
+                    <div className="space-y-2">
+                        <Label className="flex justify-between items-center"><Repeat /> Reps <span className="text-2xl font-mono">{set.reps}</span></Label>
+                        <Slider value={[set.reps]} onValueChange={([val]) => set(s => ({ ...s, reps: val }))} min={1} max={30} step={1} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="flex justify-between items-center"><Dumbbell /> Weight <span className="text-2xl font-mono">{set.weight} kg</span></Label>
+                        <Slider value={[set.weight]} onValueChange={([val]) => set(s => ({ ...s, weight: val }))} min={0} max={300} step={2.5} />
+                    </div>
                 </div>
-            </CardContent>
-        </Card>
+                <DialogFooter>
+                    <Button onClick={handleSave} className="w-full text-lg forged-button">Log Set</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
-}
+};
 
 const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) => void; onOpenChange: (open: boolean) => void; open: boolean }) => {
     const [sickButConsistent, setSickButConsistent] = useState(false);
@@ -153,7 +127,7 @@ const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) =
     );
 };
 
-
+// --- MAIN COMPONENT ---
 export function WorkoutTracker() {
   const { toast } = useToast();
   const { logWorkout, startDate, disciplineMode, workouts } = useAppStore(state => ({
@@ -164,8 +138,8 @@ export function WorkoutTracker() {
   }));
 
   const [sessionLog, setSessionLog] = useState<Record<string, ExerciseLog>>({});
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [showMetricsModal, setShowMetricsModal] = useState(false);
+  const [showSetLogger, setShowSetLogger] = useState<string | null>(null);
 
   const { todaysWorkout, dayOfProgram, weekOfProgram, isCompletedToday } = useMemo(() => {
     if (!startDate) return { todaysWorkout: null, dayOfProgram: 0, weekOfProgram: 0, isCompletedToday: false };
@@ -198,41 +172,46 @@ export function WorkoutTracker() {
     };
   }, [startDate, workouts, disciplineMode]);
 
-  const previousPerformances = useMemo(() => {
-    const performanceMap: Record<string, PreviousPerformance> = {};
-    if (!todaysWorkout) return performanceMap;
+  const performanceStats = useMemo(() => {
+    const stats: Record<string, PerformanceStats> = {};
+    if (!todaysWorkout) return stats;
+
+    const oneWeekAgo = subDays(new Date(), 7);
 
     todaysWorkout.exercises.forEach(exName => {
-        const relevantWorkouts = workouts
-            .filter(w => w.exercises.some(e => e.name === exName))
-            .reverse();
-        
-        for (const workout of relevantWorkouts) {
-            const exerciseLog = workout.exercises.find(e => e.name === exName);
-            if(exerciseLog && exerciseLog.sets.length > 0) {
-                // Find the best set from that session
-                const bestSet = exerciseLog.sets.reduce((best, current) => current.weight > best.weight ? current : best, exerciseLog.sets[0]);
-                performanceMap[exName] = { reps: bestSet.reps, weight: bestSet.weight };
-                return; // Move to the next exercise once we've found the last performance
-            }
-        }
-        performanceMap[exName] = null;
-    });
+        const allSetsForExercise = workouts
+            .flatMap(w => w.exercises.find(e => e.name === exName)?.sets || [])
+            .filter(s => s.weight > 0);
 
-    return performanceMap;
+        const personalBest = allSetsForExercise.length > 0
+            ? allSetsForExercise.reduce((best, current) => current.weight > best.weight ? current : best)
+            : null;
+
+        const lastWeekSets = workouts
+            .filter(w => parseISO(w.timestamp) >= oneWeekAgo)
+            .flatMap(w => w.exercises.find(e => e.name === exName)?.sets || [])
+            .filter(s => s.weight > 0);
+        
+        const lastWeekBest = lastWeekSets.length > 0 
+            ? lastWeekSets.reduce((best, current) => current.weight > best.weight ? current : best)
+            : null;
+
+        stats[exName] = { personalBest, lastWeekBest };
+    });
+    return stats;
   }, [workouts, todaysWorkout]);
 
 
-  const handleExerciseUpdate = (exerciseName: string, sets: Set[]) => {
-    setSessionLog(prev => ({ ...prev, [exerciseName]: { name: exerciseName, sets } }));
+  const handleAddSet = (exerciseName: string, set: Set) => {
+    const currentLog = sessionLog[exerciseName] || { name: exerciseName, sets: [] };
+    const newLog = { ...currentLog, sets: [...currentLog.sets, set] };
+    setSessionLog(prev => ({ ...prev, [exerciseName]: newLog }));
   };
 
   const isSessionComplete = useMemo(() => {
     if (!todaysWorkout) return false;
-    // Every exercise for today must be in the log
     const allExercisesAttempted = todaysWorkout.exercises.every(exName => sessionLog[exName]);
     if (!allExercisesAttempted) return false;
-    // Every logged exercise must have at least 4 sets
     const allSetsCompleted = todaysWorkout.exercises.every(exName => sessionLog[exName].sets.length >= 4);
     return allSetsCompleted;
   }, [sessionLog, todaysWorkout]);
@@ -247,16 +226,14 @@ export function WorkoutTracker() {
   
   const handleSaveWorkout = (details: any) => {
     if (!todaysWorkout) return;
-
     const exercisesInSession = Object.values(sessionLog).filter(ex => ex.sets.length > 0);
-
-    logWorkout({
-        category: todaysWorkout.id,
-        exercises: exercisesInSession,
-        ...details
-    });
+    logWorkout({ category: todaysWorkout.id, exercises: exercisesInSession, ...details });
     setShowMetricsModal(false);
-    setShowCompletionModal(true);
+    toast({
+        title: "Session Forged",
+        description: `Day ${dayOfProgram} | Week ${weekOfProgram}. The pain of today is the strength of tomorrow.`,
+        duration: 5000,
+    });
     setSessionLog({});
   };
 
@@ -298,23 +275,12 @@ export function WorkoutTracker() {
   return (
     <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
         <MetricsModal open={showMetricsModal} onOpenChange={setShowMetricsModal} onSave={handleSaveWorkout} />
-        
-        <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle className="text-center text-2xl text-accent flex flex-col items-center gap-2">
-                        <Flame className="w-12 h-12" />
-                        SESSION FORGED
-                    </DialogTitle>
-                </DialogHeader>
-                <div className="text-center space-y-2">
-                     <p className="font-bold text-lg">Day {dayOfProgram} | Week {weekOfProgram}</p>
-                     <p className="text-muted-foreground">The pain of today is the strength of tomorrow. See you at the forge.</p>
-                </div>
-                 <Button onClick={() => setShowCompletionModal(false)}>Acknowledge</Button>
-            </DialogContent>
-        </Dialog>
-
+        <SetLoggerDialog 
+            isOpen={!!showSetLogger} 
+            onOpenChange={() => setShowSetLogger(null)} 
+            onSave={(set) => showSetLogger && handleAddSet(showSetLogger, set)}
+            stats={performanceStats[showSetLogger || ''] || { personalBest: null, lastWeekBest: null }}
+        />
 
       <Card>
         <CardHeader>
@@ -327,25 +293,27 @@ export function WorkoutTracker() {
                 <AccordionItem key={exName} value={exName}>
                   <AccordionTrigger>
                     <div className="flex items-center gap-2">
-                        {(sessionLog[exName]?.sets?.length || 0) >= 4 && <CheckCircle className="w-5 h-5 text-green-500" />}
+                        {(sessionLog[exName]?.sets?.length || 0) >= 4 && <CheckCircle className="w-5 h-5 text-green-500 animate-in fade-in zoom-in" />}
                         <span>{exName}</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent>
-                    <SetTracker 
-                      exercise={sessionLog[exName] || { name: exName, sets: [] }} 
-                      onUpdate={(sets) => handleExerciseUpdate(exName, sets)} 
-                      previousPerformance={previousPerformances[exName]}
-                    />
+                  <AccordionContent className="space-y-3">
+                    {sessionLog[exName]?.sets.map((set, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 rounded-md bg-secondary/50 animate-in fade-in-0 slide-in-from-top-2 duration-500">
+                            <span className="font-semibold">Set {i+1}</span>
+                            <span className="font-mono text-foreground">{set.weight} kg x {set.reps} reps</span>
+                        </div>
+                    ))}
+                    <Button onClick={() => setShowSetLogger(exName)} variant="outline" className="w-full">
+                        <Plus className="mr-2 h-4 w-4" /> Add Set
+                    </Button>
                   </AccordionContent>
                 </AccordionItem>
               ))}
             </Accordion>
         </CardContent>
       </Card>
-      
-      <RestTimer />
-      
+            
       <Button onClick={handleOpenMetricsModal} disabled={!isSessionComplete} className="w-full text-lg py-6 forged-button">
         {isSessionComplete ? "COMPLETE SESSION" : "WORK IS NOT DONE"}
       </Button>

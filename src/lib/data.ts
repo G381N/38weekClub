@@ -1,3 +1,4 @@
+
 export const motivationalQuotes = [
   "The only person you are destined to become is the person you decide to be.",
   "Discipline is the bridge between goals and accomplishment.",
@@ -6,8 +7,12 @@ export const motivationalQuotes = [
   "The pain you feel today will be the strength you feel tomorrow.",
   "You don't have to be extreme, just consistent.",
   "It does not matter how slowly you go as long as you do not stop.",
-  "Light weight, baby!",
-  "Yeah buddy, light weight!",
+  "Light weight, baby! - Ronnie Coleman",
+  "Yeah buddy! - Ronnie Coleman",
+  "You don't know me, son! - David Goggins",
+  "Don't stop when you're tired. Stop when you're done. - David Goggins",
+  "The obsession to be the best is a sickness. - Tom Platz",
+  "Suffer the pain of discipline or suffer the pain of regret.",
 ];
 
 export const workoutCategories = [
