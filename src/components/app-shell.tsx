@@ -11,7 +11,7 @@ import { CardioTracker } from './cardio-tracker';
 import { Logo } from './icons/logo';
 import { useAuth } from '@/lib/auth';
 import { Button } from './ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from './ui/dialog';
 import { motivationalQuotes } from '@/lib/data';
 
 const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
@@ -102,10 +102,30 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
     );
 }
 
+const LogoutConfirmationDialog = ({ isOpen, onOpenChange, onConfirm }: { isOpen: boolean; onOpenChange: (open: boolean) => void; onConfirm: () => void }) => (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Confirm Logout</DialogTitle>
+                <DialogDescription>
+                    Are you sure you want to end your session?
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                </DialogClose>
+                <Button onClick={onConfirm} variant="destructive">Logout</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+);
+
 
 export function AppShell() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'workout' | 'food' | 'cardio'>('dashboard');
   const [isTimerOpen, setTimerOpen] = useState(false);
+  const [isLogoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { signOut } = useAuth();
 
   const renderContent = () => {
@@ -133,6 +153,14 @@ export function AppShell() {
   return (
     <div className="min-h-screen w-full flex flex-col bg-background font-body">
        <GlobalRestTimer isOpen={isTimerOpen} onOpenChange={setTimerOpen} />
+       <LogoutConfirmationDialog 
+        isOpen={isLogoutConfirmOpen} 
+        onOpenChange={setLogoutConfirmOpen}
+        onConfirm={() => {
+            signOut();
+            setLogoutConfirmOpen(false);
+        }}
+       />
       <header className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-background/80 backdrop-blur-sm z-10">
         <div className="flex items-center">
             <Logo className="w-8 h-8" />
@@ -142,7 +170,7 @@ export function AppShell() {
             <Button onClick={() => setTimerOpen(true)} variant="ghost" size="icon">
                 <Timer className="w-5 h-5 text-muted-foreground" />
             </Button>
-            <Button onClick={signOut} variant="ghost" size="icon">
+            <Button onClick={() => setLogoutConfirmOpen(true)} variant="ghost" size="icon">
                 <LogOut className="w-5 h-5 text-muted-foreground" />
             </Button>
         </div>
@@ -162,12 +190,16 @@ export function AppShell() {
                     key={item.id}
                     onClick={() => setActiveTab(item.id as 'dashboard' | 'workout' | 'food' | 'cardio')}
                     className={cn(
-                        'flex flex-col items-center justify-center w-full h-full gap-1 transition-colors duration-200',
+                        'flex flex-col items-center justify-center w-full h-full gap-1 transition-colors duration-200 relative rounded-lg',
                         isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                     )}
                 >
-                    <Icon className={cn('w-6 h-6 transition-transform duration-300', isActive && 'animate-pulse scale-110')} />
-                    <span className="text-xs font-medium">{item.label}</span>
+                    <div className={cn(
+                        'absolute inset-0 bg-primary/10 rounded-lg opacity-0 transition-opacity duration-300',
+                        isActive && 'opacity-100'
+                    )}></div>
+                    <Icon className={cn('w-6 h-6 transition-transform duration-300 z-10', isActive && 'animate-pulse scale-110')} />
+                    <span className="text-xs font-medium z-10">{item.label}</span>
                 </button>
             )
           })}

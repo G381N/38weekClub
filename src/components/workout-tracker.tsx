@@ -325,10 +325,8 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
       </Card>
             
       <Button onClick={handleOpenMetricsModal} disabled={!isSessionComplete} className="w-full text-lg py-6 forged-button">
-        {isSessionComplete ? "COMPLETE SESSION" : "WORK IS NOT DONE"}
+        {isSessionComplete ? "FORGE SESSION" : "WORK IS NOT DONE"}
       </Button>
     </div>
   );
 }
-
-    
