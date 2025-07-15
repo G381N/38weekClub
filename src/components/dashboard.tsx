@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Flame, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { motivationalQuotes, workoutCategories } from '@/lib/data';
-import { differenceInWeeks, startOfWeek } from 'date-fns';
+import { differenceInWeeks, startOfWeek, differenceInDays } from 'date-fns';
 
 export function Dashboard() {
   const { disciplineMode, startDate, workouts } = useAppStore(state => ({
@@ -35,39 +36,26 @@ export function Dashboard() {
     return { weeksCompleted, disciplineStreak, workoutsThisWeek: workoutsThisWeekSet };
   }, [startDate, workouts]);
 
-  const progress = Math.min((weeksCompleted / 38) * 100, 100);
   const dailyQuote = useMemo(() => motivationalQuotes[new Date().getDate() % motivationalQuotes.length], []);
+  
+  const getTodaysWorkoutCategory = () => {
+    if (!startDate) return null;
+    const dayIndex = differenceInDays(new Date(), new Date(startDate)) % 4; // Cycle through 4 workout days
+    return workoutCategories[dayIndex];
+  };
+
+  const todaysCategory = getTodaysWorkoutCategory();
 
   return (
     <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
-      <Card className="bg-gradient-to-br from-card to-secondary/50 border-border shadow-lg">
+      
+      <Card>
         <CardHeader>
-          <CardTitle className="text-center text-accent">38 Week Transformation</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-accent">Discipline Streak</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-col items-center">
-          <div className="relative w-48 h-48">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={[{ value: progress }, { value: 100 - progress }]}
-                  dataKey="value"
-                  innerRadius="70%"
-                  outerRadius="90%"
-                  startAngle={90}
-                  endAngle={450}
-                  cornerRadius={5}
-                  paddingAngle={progress > 0 && progress < 100 ? 2 : 0}
-                >
-                  <Cell fill="hsl(var(--primary))" className="stroke-primary" />
-                  <Cell fill="hsl(var(--muted))" className="stroke-muted" />
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-4xl font-bold text-foreground">{weeksCompleted}</span>
-              <span className="text-muted-foreground">of 38 Weeks</span>
-            </div>
-          </div>
+        <CardContent>
+            <p className="text-4xl font-bold text-foreground">{disciplineStreak} <span className="text-xl text-muted-foreground">Weeks</span></p>
+            <p className="text-sm text-muted-foreground">You are {weeksCompleted} of 38 weeks in.</p>
         </CardContent>
       </Card>
 
@@ -77,7 +65,7 @@ export function Dashboard() {
             <ShieldAlert className="w-8 h-8 text-destructive" />
             <div>
               <h3 className="font-bold text-destructive-foreground">Intense Mode Active</h3>
-              <p className="text-sm text-destructive-foreground/80">Missing 4 workouts this week will reset all progress.</p>
+              <p className="text-sm text-destructive-foreground/80">Missing a scheduled workout will have consequences.</p>
             </div>
           </CardContent>
         </Card>
@@ -85,28 +73,20 @@ export function Dashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>This Week's Split</CardTitle>
+          <CardTitle>Today's Target: {todaysCategory ? todaysCategory.name : 'Rest Day'}</CardTitle>
+          <CardDescription>Focus. Execute. Overcome.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
           {workoutCategories.map(cat => (
-            <div key={cat.id} className="flex justify-between items-center p-2 rounded-md bg-secondary/50">
-              <span>{cat.name}</span>
+            <div key={cat.id} className="flex justify-between items-center p-3 rounded-md bg-secondary/50">
+              <span className="font-medium">{cat.name}</span>
               {workoutsThisWeek.has(cat.id) ? (
                 <CheckCircle className="text-green-500" />
               ) : (
-                <XCircle className="text-muted-foreground" />
+                <div className="w-5 h-5 rounded-full border-2 border-muted-foreground" />
               )}
             </div>
           ))}
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Flame /> Discipline Streak</CardTitle>
-        </CardHeader>
-        <CardContent>
-            <p className="text-3xl font-bold text-accent">{disciplineStreak} <span className="text-lg text-muted-foreground">Weeks</span></p>
         </CardContent>
       </Card>
 
