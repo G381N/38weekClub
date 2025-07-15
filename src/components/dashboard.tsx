@@ -3,7 +3,7 @@
 
 import React, { useMemo } from 'react';
 import { useAppStore } from '@/lib/store';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Flame, ShieldAlert, CheckCircle, XCircle } from 'lucide-react';
 import { motivationalQuotes, workoutCategories } from '@/lib/data';
