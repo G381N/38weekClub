@@ -14,7 +14,7 @@ import { workoutCategories, exercises, type WorkoutCategoryId } from '@/lib/data
 import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, Repeat, History, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, parseISO, subDays, differenceInWeeks } from 'date-fns';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
 
 type Set = { reps: number; weight: number };
 type ExerciseLog = { name: string; sets: Set[] };
@@ -330,3 +330,5 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
     </div>
   );
 }
+
+    
