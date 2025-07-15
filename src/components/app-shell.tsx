@@ -2,11 +2,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Dumbbell, Bot, LogOut, Timer } from 'lucide-react';
+import { LayoutDashboard, Dumbbell, Bot, LogOut, Timer, HeartPulse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dashboard } from './dashboard';
 import { WorkoutTracker } from './workout-tracker';
 import { MealTracker } from './meal-tracker';
+import { CardioTracker } from './cardio-tracker';
 import { Logo } from './icons/logo';
 import { useAuth } from '@/lib/auth';
 import { Button } from './ui/button';
@@ -103,7 +104,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
 
 
 export function AppShell() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'workout' | 'food'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'workout' | 'food' | 'cardio'>('dashboard');
   const [isTimerOpen, setTimerOpen] = useState(false);
   const { signOut } = useAuth();
 
@@ -115,6 +116,8 @@ export function AppShell() {
         return <WorkoutTracker onStartTimer={() => setTimerOpen(true)} />;
       case 'food':
         return <MealTracker />;
+      case 'cardio':
+        return <CardioTracker />;
       default:
         return <Dashboard />;
     }
@@ -124,6 +127,7 @@ export function AppShell() {
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'workout', icon: Dumbbell, label: 'Workout' },
     { id: 'food', icon: Bot, label: 'Meal Tracker' },
+    { id: 'cardio', icon: HeartPulse, label: 'Cardio' },
   ];
 
   return (
@@ -156,7 +160,7 @@ export function AppShell() {
              return (
                 <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id as 'dashboard' | 'workout' | 'food')}
+                    onClick={() => setActiveTab(item.id as 'dashboard' | 'workout' | 'food' | 'cardio')}
                     className={cn(
                         'flex flex-col items-center justify-center w-full h-full gap-1 transition-colors duration-200',
                         isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
