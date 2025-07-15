@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  devServer: {
+    allowedDevOrigins: [
+      'https://*.cloudworkstations.dev', // Allow any subdomain from cloudworkstations.dev
+    ],
+  },
 };
 
 export default nextConfig;
