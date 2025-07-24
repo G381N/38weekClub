@@ -150,19 +150,21 @@ const AIResultCard = ({ exercise, result, personalBest }: { exercise: string; re
       <Separator />
 
       {/* Recommended Plan */}
-      <div className="mb-3">
-        <div className={`flex items-center justify-between cursor-pointer rounded-lg p-2 sm:p-3 transition-colors ${planExpanded ? '' : 'hover:bg-accent/5'}`} onClick={() => setPlanExpanded(v => !v)}>
-          <div className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-primary" />
-            <h4 className="font-semibold text-primary text-base sm:text-lg">Recommended Workout Plan</h4>
+      <Collapsible open={planExpanded} onOpenChange={setPlanExpanded}>
+        <CollapsibleTrigger asChild>
+          <div className="flex items-center justify-between cursor-pointer rounded-lg p-2 sm:p-3 transition-colors">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" />
+              <h4 className="font-semibold text-primary text-base sm:text-lg">Recommended Workout Plan</h4>
+            </div>
+            {planExpanded ? (
+              <ChevronUp className="w-5 h-5 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-muted-foreground" />
+            )}
           </div>
-          {planExpanded ? (
-            <ChevronUp className="w-5 h-5 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="w-5 h-5 text-muted-foreground" />
-          )}
-        </div>
-        {planExpanded && (
+        </CollapsibleTrigger>
+        <CollapsibleContent>
           <div className="grid gap-2 mt-2">
             {result.recommendedPlan && result.recommendedPlan.length > 0 ? (
               result.recommendedPlan.map((set, i) => (
@@ -209,8 +211,8 @@ const AIResultCard = ({ exercise, result, personalBest }: { exercise: string; re
               </div>
             )}
           </div>
-        )}
-      </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <Separator />
 
@@ -516,7 +518,7 @@ export default function AIAnalysisPage() {
                 onClick={() => handleDayClick(key as WorkoutDayType)}
               >
                 <div className="flex flex-col items-start gap-1">
-                  <span className="font-semibold group-hover:text-accent">{label}</span>
+                  <span className="font-semibold md:group-hover:text-accent">{label}</span>
                   <Badge 
                     variant="secondary" 
                     className={selectedDay === key ? '' : dayTypeColors[key as WorkoutDayType]}
