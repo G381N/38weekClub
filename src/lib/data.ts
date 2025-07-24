@@ -18,46 +18,51 @@ export const motivationalQuotes = [
 ];
 
 export const workoutCategories = [
-  { id: 'chest_biceps', name: 'Chest & Biceps' },
-  { id: 'back_triceps', name: 'Back & Triceps' },
-  { id: 'shoulders', name: 'Shoulders' },
-  { id: 'legs', name: 'Legs' },
+  { id: 'day1', name: 'Day 1 - Chest & Biceps' },
+  { id: 'day2', name: 'Day 2 - Back & Triceps & Forearms' },
+  { id: 'day3', name: 'Day 3 - Shoulders' },
+  { id: 'day4', name: 'Day 4 - Legs' },
 ] as const;
 
 export type WorkoutCategoryId = typeof workoutCategories[number]['id'];
 
 export const exercises: Record<WorkoutCategoryId, string[]> = {
-  chest_biceps: [
-    'Incline Dumbbell Press',
+  day1: [
     'Flat Barbell Bench Press',
-    'Decline Machine Press',
-    'Cable Crossovers',
-    'Barbell Curls',
-    'Dumbbell Hammer Curls',
+    'Chest Press Machine',
+    'Incline Barbell Press',
+    'Chest Flies',
+    'Barbell Curls (Straight Bar)',
     'Preacher Curls',
+    'Hammer Curls',
+    'Incline Dumbbell Curls',
+    'Biceps-Focused Lat Pulldowns',
   ],
-  back_triceps: [
-    'Pull-ups',
-    'Bent-over Rows',
-    'Lat Pulldowns',
-    'T-bar Rows',
-    'Close-grip Bench Press',
+  day2: [
+    'Wide-Grip Lat Pulldown',
+    'Close-Grip Lat Pulldown',
+    'Seated Rows',
+    'T-Bar Rows',
+    'Single-Arm Lat Cable Pullovers',
     'Tricep Pushdowns',
-    'Skull Crushers',
+    'Tricep Kickbacks',
+    'Skull Crushers (EZ Bar)',
+    'Reverse Barbell Curls',
+    'Wrist Curls',
+    'Plate Pinches / Static Holds',
   ],
-  shoulders: [
-    'Overhead Press',
-    'Dumbbell Lateral Raises',
+  day3: [
+    'Shoulder Press (Traditional Grip)',
+    'Shoulder Press (Hammer Grip)',
+    'Lateral Raises',
+    'Rear Delt Machine / Raises',
+    'Shrugs',
     'Face Pulls',
-    'Arnold Press',
-    'Upright Rows',
   ],
-  legs: [
-    'Barbell Squats',
-    'Leg Press',
-    'Romanian Deadlifts',
+  day4: [
     'Leg Extensions',
+    'Leg Press',
     'Hamstring Curls',
-    'Calf Raises',
+    'Standing Calf Raises',
   ],
 };

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -11,19 +11,122 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { workoutCategories, exercises, type WorkoutCategoryId } from '@/lib/data';
-import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, Repeat, History, Award } from 'lucide-react';
+import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, Repeat, History, Award, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, parseISO, subDays, differenceInWeeks } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
+import { type Set, type LastWeekSet, type PersonalBest } from '@/lib/types';
+import { WheelPicker } from './ui/wheel-picker';
+import { db } from '@/lib/firebase';
+import { setDoc, doc, getDoc, updateDoc, collection, query, getDocs, deleteDoc } from 'firebase/firestore';
+import { useAuth } from '@/lib/auth';
 
-type Set = { reps: number; weight: number };
 type ExerciseLog = { name: string; sets: Set[] };
 type PerformanceStats = {
-    personalBest: Set | null;
-    lastWeekBest: Set | null;
+    personalBest: PersonalBest | null;
+    lastWeekSets: LastWeekSet | null;
 };
 
 // --- DIALOGS ---
+
+const StatsModal = ({
+    isOpen,
+    onOpenChange,
+    exerciseName,
+    stats
+}: {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    exerciseName: string;
+    stats: PerformanceStats;
+}) => {
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5" />
+                        {exerciseName} - Performance Stats
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                    {/* Personal Best Section */}
+                    <div className="space-y-3">
+                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                            <Award className="w-5 h-5 text-yellow-500" />
+                            Personal Best
+                        </h3>
+                        {stats.personalBest ? (
+                            <div className="p-4 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg border border-yellow-500/30">
+                                <div className="text-center">
+                                    <p className="text-3xl font-bold text-yellow-600">
+                                        {stats.personalBest.weight} kg
+                                    </p>
+                                    <p className="text-lg text-muted-foreground">
+                                        × {stats.personalBest.reps} reps
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Achieved: {new Date(stats.personalBest.achievedAt).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-muted rounded-lg text-center">
+                                <p className="text-muted-foreground">No personal best recorded yet</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Last Week Sets Section */}
+                    <div className="space-y-3">
+                        <h3 className="font-semibold text-lg flex items-center gap-2">
+                            <History className="w-5 h-5 text-blue-500" />
+                            Last Week's Sets
+                        </h3>
+                        {stats.lastWeekSets && stats.lastWeekSets.sets.length > 0 ? (
+                            <div className="space-y-2">
+                                {stats.lastWeekSets.sets.map((set, index) => (
+                                    <div key={index} className="flex justify-between items-center p-3 bg-secondary/50 rounded-lg">
+                                        <span className="font-semibold">Set {index + 1}</span>
+                                        <span className="font-mono">
+                                            {set.weight} kg × {set.reps} reps
+                                        </span>
+                                    </div>
+                                ))}
+                                <p className="text-xs text-muted-foreground text-center">
+                                    Week {stats.lastWeekSets.weekNumber}
+                                </p>
+                            </div>
+                        ) : stats.personalBest && stats.personalBest.achievedAt && differenceInWeeks(new Date(), parseISO(stats.personalBest.achievedAt)) < 1 ? (
+                            <div className="p-4 bg-muted rounded-lg text-center">
+                                <p className="font-bold text-lg text-yellow-600">{stats.personalBest.weight} kg</p>
+                                <p className="text-lg text-muted-foreground">× {stats.personalBest.reps} reps</p>
+                                <p className="text-xs text-muted-foreground mt-2">Achieved: {stats.personalBest.achievedAt}</p>
+                            </div>
+                        ) : (
+                            <div className="p-4 bg-muted rounded-lg text-center">
+                                <p className="text-muted-foreground">No sets recorded last week</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => onOpenChange(false)} className="w-full">
+                        Close
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+const motivationalQuotes = [
+  "Consistency is key. Log every rep!",
+  "Every set counts toward progress.",
+  "Push your limits, then log them.",
+  "Small steps, big results.",
+  "Discipline is doing it even when you don't feel like it."
+];
 
 const SetLoggerDialog = ({
     isOpen,
@@ -38,7 +141,14 @@ const SetLoggerDialog = ({
     stats: PerformanceStats;
     onStartTimer: () => void;
 }) => {
-    const [set, setSet] = useState<Set>({ reps: 8, weight: 20 });
+    const [set, setSet] = useState<Set>({ reps: 8, weight: 20, timestamp: new Date().toISOString() });
+    const [quoteIdx, setQuoteIdx] = useState(0);
+
+    useEffect(() => {
+      if (isOpen) {
+        setQuoteIdx(Math.floor(Math.random() * motivationalQuotes.length));
+      }
+    }, [isOpen]);
 
     const handleSave = () => {
         onSave(set);
@@ -46,35 +156,41 @@ const SetLoggerDialog = ({
         onStartTimer();
     }
 
+    // Picker options
+    const weightOptions = Array.from({length: 121}, (_, i) => i * 2.5); // 0 to 300kg
+    const repsOptions = Array.from({length: 30}, (_, i) => i + 1); // 1 to 30
+
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent>
+            <DialogContent className="max-w-xs p-6 rounded-xl bg-background flex flex-col items-center justify-center">
                 <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2"><Dumbbell /> Log Your Set</DialogTitle>
+                  <DialogTitle>What is the heaviest weight you lifted?</DialogTitle>
+                  <DialogDescription>Push your limits, then log them.</DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-2 gap-4 my-4 text-center">
-                    <div className="p-2 bg-secondary/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground font-bold flex items-center justify-center gap-1"><Award /> PB</p>
-                        <p className="font-mono text-lg">{stats.personalBest ? `${stats.personalBest.weight}kg x ${stats.personalBest.reps}` : 'N/A'}</p>
-                    </div>
-                     <div className="p-2 bg-secondary/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground font-bold flex items-center justify-center gap-1"><History /> Last Week</p>
-                        <p className="font-mono text-lg">{stats.lastWeekBest ? `${stats.lastWeekBest.weight}kg x ${stats.lastWeekBest.reps}` : 'N/A'}</p>
-                    </div>
+                <div className="flex items-center justify-center gap-6 my-4 w-full">
+                  <div className="flex flex-col items-center">
+                    <WheelPicker
+                      value={set.weight}
+                      onChange={val => setSet(s => ({ ...s, weight: val }))}
+                      options={weightOptions}
+                      itemHeight={40}
+                      className=""
+                    />
+                    <span className="text-base font-semibold text-muted-foreground mt-1">kg</span>
+                  </div>
+                  <span className="text-3xl font-bold text-muted-foreground mx-2">×</span>
+                  <div className="flex flex-col items-center">
+                    <WheelPicker
+                      value={set.reps}
+                      onChange={val => setSet(s => ({ ...s, reps: val }))}
+                      options={repsOptions}
+                      itemHeight={40}
+                      className=""
+                    />
+                    <span className="text-base font-semibold text-muted-foreground mt-1">reps</span>
+                  </div>
                 </div>
-                <div className="space-y-6 py-4">
-                    <div className="space-y-2">
-                        <Label className="flex justify-between items-center"><Repeat /> Reps <span className="text-2xl font-mono">{set.reps}</span></Label>
-                        <Slider value={[set.reps]} onValueChange={([val]) => setSet(s => ({ ...s, reps: val }))} min={1} max={30} step={1} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="flex justify-between items-center"><Dumbbell /> Weight <span className="text-2xl font-mono">{set.weight} kg</span></Label>
-                        <Slider value={[set.weight]} onValueChange={([val]) => setSet(s => ({ ...s, weight: val }))} min={0} max={300} step={2.5} />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button onClick={handleSave} className="w-full text-lg forged-button">Log Set & Start Timer</Button>
-                </DialogFooter>
+                <Button onClick={handleSave} className="w-full text-lg py-4 mt-4 forged-button rounded-lg">Log Set & Start Timer</Button>
             </DialogContent>
         </Dialog>
     );
@@ -133,16 +249,70 @@ const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) =
 // --- MAIN COMPONENT ---
 export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
   const { toast } = useToast();
-  const { logWorkout, startDate, disciplineMode, workouts } = useAppStore(state => ({
+  const { 
+    logWorkout, 
+    startDate, 
+    disciplineMode, 
+    workoutHistory,
+    saveLastWeekSets,
+    savePersonalBest,
+    getLastWeekSets,
+    getPersonalBest
+  } = useAppStore(state => ({
     logWorkout: state.logWorkout,
     startDate: state.startDate,
     disciplineMode: state.disciplineMode,
-    workouts: state.workouts
+    workoutHistory: state.workoutHistory,
+    saveLastWeekSets: state.saveLastWeekSets,
+    savePersonalBest: state.savePersonalBest,
+    getLastWeekSets: state.getLastWeekSets,
+    getPersonalBest: state.getPersonalBest
   }));
+
+  const { user } = useAuth();
+
+  // Utility to flatten workoutHistory into a flat array
+  const flattenWorkouts = (workoutHistory: any): Array<{ dayType: string; week: number; startDate: string; exercises: any[] }> => {
+    const all: Array<{ dayType: string; week: number; startDate: string; exercises: any[] }> = [];
+    Object.entries(workoutHistory).forEach(([dayType, weeks]) => {
+      (weeks as any[]).forEach((week: any) => {
+        all.push({
+          dayType,
+          week: week.weekNumber,
+          startDate: week.startDate,
+          exercises: week.exercises,
+        });
+      });
+    });
+    return all;
+  };
+
+  const workouts = useMemo(() => flattenWorkouts(workoutHistory), [workoutHistory]);
 
   const [sessionLog, setSessionLog] = useState<Record<string, ExerciseLog>>({});
   const [showMetricsModal, setShowMetricsModal] = useState(false);
   const [showSetLogger, setShowSetLogger] = useState<string | null>(null);
+  const [showStatsModal, setShowStatsModal] = useState<string | null>(null);
+  const [performanceStats, setPerformanceStats] = useState<Record<string, PerformanceStats>>({});
+
+  // Persistent set logging: key for today's session
+  const todayKey = `sessionLog_${new Date().toISOString().slice(0,10)}`;
+
+  // Load saved sets on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(todayKey);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSessionLog(parsed);
+      } catch {}
+    }
+  }, []);
+
+  // Save sets to localStorage whenever sessionLog changes
+  useEffect(() => {
+    localStorage.setItem(todayKey, JSON.stringify(sessionLog));
+  }, [sessionLog]);
 
   const { todaysWorkout, dayOfProgram, weekOfProgram, isCompletedToday } = useMemo(() => {
     if (!startDate) {
@@ -155,13 +325,22 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
     }
     
     // Determine the next workout based on completion history, not the calendar
-    const totalWorkoutsCompleted = workouts.length;
-    const nextWorkoutIndex = totalWorkoutsCompleted % workoutCategories.length;
+    const workouts = flattenWorkouts(workoutHistory);
+    const nextWorkoutIndex = workouts.length % workoutCategories.length;
     const nextCategory = workoutCategories[nextWorkoutIndex];
     
     // Check if the *next required* workout has been done today
-    const lastWorkoutForCategory = workouts.filter(w => w.category === nextCategory.id).sort((a,b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()).shift();
-    const isCompletedToday = lastWorkoutForCategory ? isToday(parseISO(lastWorkoutForCategory.timestamp)) : false;
+    // Map nextCategory.id to dayType
+    let dayType: string = '';
+    switch (nextCategory.id) {
+      case 'day1': dayType = 'chest_biceps'; break;
+      case 'day2': dayType = 'back_triceps'; break;
+      case 'day3': dayType = 'shoulders'; break;
+      case 'day4': dayType = 'legs'; break;
+      default: dayType = 'chest_biceps';
+    }
+    const lastWorkoutForCategory = workouts.filter(w => w.dayType === dayType).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()).shift();
+    const isCompletedToday = lastWorkoutForCategory ? isToday(new Date(lastWorkoutForCategory.startDate)) : false;
 
     // Day of program and week of program remain calendar-based for progress tracking
     const dayOfProgram = differenceInWeeks(new Date(), new Date(startDate)) * 7 + (new Date().getDay() || 7);
@@ -179,43 +358,78 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
         weekOfProgram,
         isCompletedToday: isCompletedToday,
     };
-  }, [startDate, workouts, disciplineMode]);
+  }, [startDate, workoutHistory, disciplineMode]);
 
-  const performanceStats = useMemo(() => {
-    const stats: Record<string, PerformanceStats> = {};
-    if (!todaysWorkout) return stats;
-
-    const oneWeekAgo = subDays(new Date(), 7);
-
-    todaysWorkout.exercises.forEach(exName => {
-        const allSetsForExercise = workouts
-            .flatMap(w => w.exercises.find(e => e.name === exName)?.sets || [])
-            .filter(s => s.weight > 0);
-
-        const personalBest = allSetsForExercise.length > 0
-            ? allSetsForExercise.reduce((best, current) => current.weight > best.weight ? current : best)
-            : null;
-
-        const lastWeekSets = workouts
-            .filter(w => parseISO(w.timestamp) >= oneWeekAgo)
-            .flatMap(w => w.exercises.find(e => e.name === exName)?.sets || [])
-            .filter(s => s.weight > 0);
-        
-        const lastWeekBest = lastWeekSets.length > 0 
-            ? lastWeekSets.reduce((best, current) => current.weight > best.weight ? current : best)
-            : null;
-
-        stats[exName] = { personalBest, lastWeekBest };
-    });
-    return stats;
-  }, [workouts, todaysWorkout]);
-
-
-  const handleAddSet = (exerciseName: string, set: Set) => {
+  // Refactored handleAddSet to save to Firestore with circular buffer logic
+  const handleAddSet = async (exerciseName: string, set: Set) => {
     const currentLog = sessionLog[exerciseName] || { name: exerciseName, sets: [] };
     const newLog = { ...currentLog, sets: [...currentLog.sets, set] };
     setSessionLog(prev => ({ ...prev, [exerciseName]: newLog }));
+    // Save to Firestore with circular buffer logic
+    if (user) {
+      const weekNum = weekOfProgram;
+      const varKey = exerciseName.replace(/[\s\/]+/g, '_');
+      const weeksCol = collection(db, 'users', user.uid, 'workouts', varKey, 'weeks');
+      const weekDocs = await getDocs(weeksCol);
+      const weekEntries = [];
+      weekDocs.forEach(docSnap => {
+        const data = docSnap.data();
+        weekEntries.push({ id: docSnap.id, week: data.week });
+      });
+      // If there are already 3 weeks, delete the oldest
+      if (weekEntries.length >= 3) {
+        // Sort by week number or by Firestore doc id (if week number is not reliable)
+        weekEntries.sort((a, b) => a.week - b.week);
+        await deleteDoc(doc(db, 'users', user.uid, 'workouts', varKey, 'weeks', weekEntries[0].id));
+      }
+      await setDoc(
+        doc(db, 'users', user.uid, 'workouts', varKey, 'weeks', `week_${weekNum}`),
+        {
+          sets: newLog.sets,
+          week: weekNum,
+          startDate: new Date().toISOString().slice(0, 10),
+        },
+        { merge: true }
+      );
+    }
   };
+
+  // Refactored stats fetching for PB/LWB
+  useEffect(() => {
+    if (!todaysWorkout || !user) return;
+    const loadStats = async () => {
+      const stats: Record<string, PerformanceStats> = {};
+      for (const exerciseName of todaysWorkout.exercises) {
+        const varKey = exerciseName.replace(/[\s\/]+/g, '_');
+        const pbSnap = await getDoc(doc(db, 'users', user.uid, 'workouts', varKey, 'meta', 'personal_best'));
+        const weekSnap = await getDoc(doc(db, 'users', user.uid, 'workouts', varKey, 'weeks', `week_${weekOfProgram - 1}`));
+        let pb = null;
+        if (pbSnap.exists()) {
+          const d = pbSnap.data();
+          pb = {
+            weight: d.weight || d.bestWeight || '',
+            reps: d.reps || d.bestReps || '',
+            achievedAt: d.achievedAt || d.timestamp || '',
+          };
+        }
+        let lastWeekSets = null;
+        if (weekSnap.exists()) {
+          const d = weekSnap.data();
+          lastWeekSets = {
+            sets: d.sets || [],
+            weekNumber: d.week || '',
+            startDate: d.startDate || '',
+          };
+        }
+        stats[exerciseName] = {
+          personalBest: pb,
+          lastWeekSets,
+        };
+      }
+      setPerformanceStats(stats);
+    };
+    loadStats();
+  }, [todaysWorkout, weekOfProgram, user]);
 
   const isSessionComplete = useMemo(() => {
     if (!todaysWorkout) return false;
@@ -233,10 +447,38 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
     setShowMetricsModal(true);
   };
   
-  const handleSaveWorkout = (details: any) => {
+  const handleSaveWorkout = async (details: any) => {
     if (!todaysWorkout) return;
+    
     const exercisesInSession = Object.values(sessionLog).filter(ex => ex.sets.length > 0);
+    
+    // Save workout to main collection
     logWorkout({ category: todaysWorkout.id, exercises: exercisesInSession, ...details });
+    
+    // Save last week sets and personal bests for each exercise
+    for (const exercise of exercisesInSession) {
+      if (exercise.sets.length > 0) {
+        // Save last week sets
+        await saveLastWeekSets(exercise.name, exercise.sets, weekOfProgram);
+        
+        // Check for personal best
+        const maxWeightSet = exercise.sets.reduce((best, current) => 
+          current.weight > best.weight ? current : best
+        );
+        await savePersonalBest(exercise.name, maxWeightSet.weight, maxWeightSet.reps);
+      }
+    }
+    
+    // Update discipline streak in user doc
+    if (user) {
+      const userRef = doc(db, 'users', user.uid);
+      const userSnap = await getDoc(userRef);
+      let streak = 1;
+      if (userSnap.exists() && userSnap.data().disciplineStreak) {
+        streak = userSnap.data().disciplineStreak + 1;
+      }
+      await updateDoc(userRef, { disciplineStreak: streak });
+    }
     setShowMetricsModal(false);
     toast({
         title: "Session Forged",
@@ -244,6 +486,7 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
         duration: 5000,
     });
     setSessionLog({});
+    localStorage.removeItem(todayKey);
   };
 
   if (!todaysWorkout) {
@@ -280,7 +523,6 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
       );
   }
 
-
   return (
     <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
         <MetricsModal open={showMetricsModal} onOpenChange={setShowMetricsModal} onSave={handleSaveWorkout} />
@@ -288,8 +530,14 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
             isOpen={!!showSetLogger} 
             onOpenChange={() => setShowSetLogger(null)} 
             onSave={(set) => showSetLogger && handleAddSet(showSetLogger, set)}
-            stats={performanceStats[showSetLogger || ''] || { personalBest: null, lastWeekBest: null }}
+            stats={performanceStats[showSetLogger || ''] || { personalBest: null, lastWeekSets: null }}
             onStartTimer={onStartTimer}
+        />
+        <StatsModal
+            isOpen={!!showStatsModal}
+            onOpenChange={() => setShowStatsModal(null)}
+            exerciseName={showStatsModal || ''}
+            stats={performanceStats[showStatsModal || ''] || { personalBest: null, lastWeekSets: null }}
         />
 
       <Card>
@@ -308,15 +556,42 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="space-y-3">
+                    <div className="flex gap-2">
+                        <Button 
+                            onClick={() => setShowStatsModal(exName)} 
+                            variant="outline" 
+                            size="sm"
+                            className="flex-1"
+                        >
+                            <BarChart3 className="mr-2 h-4 w-4" /> Stats
+                        </Button>
+                        <Button 
+                            onClick={() => setShowSetLogger(exName)} 
+                            variant="outline" 
+                            size="sm"
+                            className="flex-1"
+                        >
+                            <Plus className="mr-2 h-4 w-4" /> Add Set
+                        </Button>
+                    </div>
                     {sessionLog[exName]?.sets.map((set, i) => (
-                        <div key={i} className="flex justify-between items-center p-3 rounded-md bg-secondary/50 animate-in fade-in-0 slide-in-from-top-2 duration-500">
+                        <div key={i} className="flex items-center p-3 rounded-md bg-secondary/50 animate-in fade-in-0 slide-in-from-top-2 duration-500 gap-2">
+                            <div className="flex-1 flex flex-col">
                             <span className="font-semibold">Set {i+1}</span>
                             <span className="font-mono text-foreground">{set.weight} kg x {set.reps} reps</span>
+                            </div>
+                            <button
+                                className="ml-2 text-red-500 hover:text-red-700 font-bold text-lg"
+                                onClick={() => {
+                                    const newSets = sessionLog[exName].sets.filter((_, idx) => idx !== i);
+                                    setSessionLog(prev => ({ ...prev, [exName]: { ...prev[exName], sets: newSets } }));
+                                }}
+                                aria-label="Delete set"
+                            >
+                                ×
+                            </button>
                         </div>
                     ))}
-                    <Button onClick={() => setShowSetLogger(exName)} variant="outline" className="w-full">
-                        <Plus className="mr-2 h-4 w-4" /> Add Set
-                    </Button>
                   </AccordionContent>
                 </AccordionItem>
               ))}

@@ -9,6 +9,12 @@ const oswald = Oswald({ subsets: ['latin'], variable: '--font-oswald' });
 export const metadata: Metadata = {
   title: '38 Club: Reborn',
   description: 'A 38-week transformation journey.',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico', sizes: '32x32' }
+    ],
+  },
 };
 
 export default function RootLayout({

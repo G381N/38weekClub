@@ -81,10 +81,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (error) {
         console.error("Error signing in: ", error);
         const authError = error as AuthError;
-        if (authError.code === 'auth/user-not-found' || authError.code === 'auth/wrong-password') {
-            setError('Invalid email or password. Please try again.');
+        // Map all credential-related errors to a friendly message
+        if (
+          authError.code === 'auth/user-not-found' ||
+          authError.code === 'auth/wrong-password' ||
+          authError.code === 'auth/invalid-credential' ||
+          authError.code === 'auth/invalid-email' ||
+          authError.code === 'auth/invalid-login-credentials'
+        ) {
+          setError('Invalid email or password. Please try again.');
         } else {
-            setError(authError.message);
+          setError('Authentication failed. Please try again.');
         }
         return null;
       } finally {

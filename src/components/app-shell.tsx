@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/auth';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription, DialogClose } from './ui/dialog';
 import { motivationalQuotes } from '@/lib/data';
+import AIAnalysisPage from '@/app/ai-analysis';
 
 const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChange: (open: boolean) => void }) => {
     const [seconds, setSeconds] = useState(90);
@@ -123,7 +124,7 @@ const LogoutConfirmationDialog = ({ isOpen, onOpenChange, onConfirm }: { isOpen:
 
 
 export function AppShell() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'workout' | 'food' | 'cardio'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'workout' | 'food' | 'ai'>('dashboard');
   const [isTimerOpen, setTimerOpen] = useState(false);
   const [isLogoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const { signOut } = useAuth();
@@ -136,8 +137,8 @@ export function AppShell() {
         return <WorkoutTracker onStartTimer={() => setTimerOpen(true)} />;
       case 'food':
         return <MealTracker />;
-      case 'cardio':
-        return <CardioTracker />;
+      case 'ai':
+        return <AIAnalysisPage />;
       default:
         return <Dashboard />;
     }
@@ -146,8 +147,8 @@ export function AppShell() {
   const navItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'workout', icon: Dumbbell, label: 'Workout' },
-    { id: 'food', icon: Bot, label: 'Meal Tracker' },
-    { id: 'cardio', icon: HeartPulse, label: 'Cardio' },
+    { id: 'food', icon: HeartPulse, label: 'Health Tracker' },
+    { id: 'ai', icon: Bot, label: 'AI Insights' },
   ];
 
   return (
@@ -188,7 +189,7 @@ export function AppShell() {
              return (
                 <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id as 'dashboard' | 'workout' | 'food' | 'cardio')}
+                    onClick={() => setActiveTab(item.id as 'dashboard' | 'workout' | 'food' | 'ai')}
                     className={cn(
                         'flex flex-col items-center justify-center w-full h-full gap-1 transition-colors duration-200 relative rounded-lg',
                         isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'

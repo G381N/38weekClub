@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import { useAppStore } from '@/lib/store';
 import { Button } from './ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from './ui/card';
 import { Camera, Download, Share2 } from 'lucide-react';
 import { Logo } from './icons/logo';
 

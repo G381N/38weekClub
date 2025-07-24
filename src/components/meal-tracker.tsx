@@ -1,18 +1,23 @@
 
 "use client";
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { useAppStore } from '@/lib/store';
 import { analyzeFoodImage, type AnalyzeFoodImageOutput } from '@/ai/flows/analyze-food-image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Upload, Loader2, BrainCircuit, Flame, Drumstick, Wheat, Droplets, Target } from 'lucide-react';
+import { Upload, Loader2, BrainCircuit, Flame, Drumstick, Wheat, Droplets, Target, HeartPulse } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Slider } from '@/components/ui/slider';
 import { Meal } from '@/lib/types';
 import { isToday, parseISO } from 'date-fns';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth';
 
 const fileToDataUri = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -53,6 +58,109 @@ const MealLogItem = ({ meal }: { meal: Meal }) => (
         </div>
     </div>
 );
+
+const HealthStatsDialog = () => {
+    const [weight, setWeight] = useState(75);
+    const [bodyFat, setBodyFat] = useState(15);
+    const [isOpen, setIsOpen] = useState(false);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const { user } = useAuth();
+    const { userMetrics } = useAppStore();
+    const { toast } = useToast();
+
+    useEffect(() => {
+        if (userMetrics) {
+            setWeight(userMetrics.weight);
+            setBodyFat(userMetrics.bodyFat);
+        }
+    }, [userMetrics]);
+
+    const handleUpdate = async () => {
+        if (!user) {
+            toast({ title: 'Error', description: 'Please log in to update health stats', variant: 'destructive' });
+            return;
+        }
+
+        setIsUpdating(true);
+        try {
+            const userRef = doc(db, 'users', user.uid);
+            await updateDoc(userRef, {
+                weight,
+                bodyFat,
+                lastUpdated: new Date().toISOString()
+            });
+
+            // Health stats updated in Firestore, will be synced on next app load
+            
+            toast({
+                title: 'Health Stats Updated',
+                description: 'Your weight and body fat have been successfully updated'
+            });
+            
+            setIsOpen(false);
+        } catch (error) {
+            toast({
+                title: 'Update Failed',
+                description: 'Failed to update health stats. Please try again.',
+                variant: 'destructive'
+            });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="w-full">
+                    <HeartPulse className="w-4 h-4 mr-2" />
+                    Update Health Stats
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <HeartPulse className="w-5 h-5 text-accent" />
+                        Update Health Stats
+                    </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Weight: {weight} kg</label>
+                        <Slider
+                            value={[weight]}
+                            onValueChange={([value]) => setWeight(value)}
+                            min={30}
+                            max={200}
+                            step={0.5}
+                            className="w-full"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Body Fat: {bodyFat}%</label>
+                        <Slider
+                            value={[bodyFat]}
+                            onValueChange={([value]) => setBodyFat(value)}
+                            min={3}
+                            max={50}
+                            step={0.5}
+                            className="w-full"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleUpdate} disabled={isUpdating} className="forged-button">
+                        {isUpdating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                        Update Stats
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
 
 const DailyTotalsCard = ({ totals }: { totals: { calories: number; protein: number; carbs: number; fat: number } }) => (
     <Card>
@@ -150,6 +258,31 @@ export function MealTracker() {
 
     return (
         <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
+            {/* Header */}
+            <div className="text-center space-y-2">
+                <h1 className="text-3xl font-bold text-foreground uppercase tracking-wider">
+                    Health Tracker
+                </h1>
+                <p className="text-muted-foreground">
+                    Track your nutrition and monitor your health progress
+                </p>
+            </div>
+
+            {/* Health Stats Update */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <HeartPulse className="w-5 h-5 text-accent" />
+                        Health Management
+                    </CardTitle>
+                    <CardDescription>
+                        Keep your health metrics up to date for better AI recommendations
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <HealthStatsDialog />
+                </CardContent>
+            </Card>
 
             <DailyTotalsCard totals={dailyTotals} />
 

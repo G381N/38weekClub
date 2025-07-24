@@ -23,6 +23,33 @@ export interface Meal extends AnalyzeFoodImageOutput {
   photoDataUri: string;
 }
 
+export type Set = {
+  reps: number;
+  weight: number;
+  timestamp: string;
+};
+
+export type LastWeekSet = {
+  id: string;
+  userId: string;
+  exerciseName: string;
+  weekNumber: number;
+  sets: Set[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PersonalBest = {
+  id: string;
+  userId: string;
+  exerciseName: string;
+  bestWeight: number;
+  bestReps: number;
+  achievedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Workout = {
   id: string;
   timestamp: string;
@@ -46,7 +73,7 @@ export type AppState = {
   userMetrics: UserMetrics;
   onboardingPhotos: PhysiquePhotos;
   completionPhotos: PhysiquePhotos;
-  workouts: Workout[];
+  workoutHistory: WorkoutHistory;
   meals: Meal[];
   startDate: string | null;
   
@@ -62,4 +89,24 @@ export type AppState = {
   logMeal: (meal: Omit<Meal, 'id' | 'timestamp'>) => void;
   addCompletionPhotos: (photos: PhysiquePhotos) => void;
   resetProgress: () => void;
+  saveLastWeekSets: (exerciseName: string, sets: Set[], weekNumber: number) => void;
+  savePersonalBest: (exerciseName: string, weight: number, reps: number) => void;
+  getLastWeekSets: (exerciseName: string, weekNumber: number) => Promise<LastWeekSet | null>;
+  getPersonalBest: (exerciseName: string) => Promise<PersonalBest | null>;
+};
+
+// New types for revamped workout data structure
+export type WorkoutDayType = 'chest_biceps' | 'back_triceps' | 'shoulders' | 'legs';
+
+export type WeeklyWorkoutData = {
+  weekNumber: number; // 1, 2, 3 (rotating)
+  startDate: string;  // ISO date for the week
+  exercises: {
+    name: string;
+    sets: { reps: number; weight: number; timestamp: string }[];
+  }[];
+};
+
+export type WorkoutHistory = {
+  [K in WorkoutDayType]: WeeklyWorkoutData[]; // Always max length 3 (circular buffer)
 };
