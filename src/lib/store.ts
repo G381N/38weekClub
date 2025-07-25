@@ -267,6 +267,18 @@ export const useAppStore = create<AppState>()(
         
         return null;
       },
+      deleteOldMeals: async () => {
+        const userId = get().userId;
+        if (!userId) return;
+        const today = new Date().toISOString().slice(0, 10);
+        const docRef = doc(db, 'users', userId);
+        const docSnap = await getDoc(docRef);
+        if (!docSnap.exists()) return;
+        const data = docSnap.data();
+        if (!data.meals) return;
+        const filteredMeals = data.meals.filter((meal: any) => meal.timestamp && meal.timestamp.slice(0, 10) === today);
+        await setDoc(docRef, { meals: filteredMeals }, { merge: true });
+      },
     }),
     {
       name: '38-club-storage',
