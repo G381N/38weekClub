@@ -7,6 +7,7 @@ export type UserMetrics = {
   bodyFat: number;
   height: number;
   maintenanceCalories: number;
+  goalWeight?: number;
 };
 
 export type PhysiquePhotos = {

@@ -11,7 +11,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { workoutCategories, exercises, type WorkoutCategoryId } from '@/lib/data';
-import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, Repeat, History, Award, BarChart3 } from 'lucide-react';
+import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, Repeat, History, Award, BarChart3, Mic, MicOff, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { isToday, parseISO, subDays, differenceInWeeks } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
@@ -243,6 +243,164 @@ const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) =
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+    );
+};
+
+const VoiceLoggingFAB = ({ onLogSet }: { onLogSet: (exercise: string, weight: number, reps: number) => void }) => {
+    const { toast } = useToast();
+    const [isListening, setIsListening] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [transcript, setTranscript] = useState('');
+    
+    const recognition = useMemo(() => {
+        if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
+            const SpeechRecognition = (window as any).webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+            return recognition;
+        }
+        return null;
+    }, []);
+    
+    const startListening = () => {
+        if (!recognition) {
+            toast({ title: 'Voice Recognition Not Available', description: 'Your browser does not support voice recognition.', variant: 'destructive' });
+            return;
+        }
+        
+        setIsListening(true);
+        setTranscript('');
+        
+        recognition.onresult = (event: any) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                }
+            }
+            setTranscript(finalTranscript);
+        };
+        
+        recognition.onend = () => {
+            setIsListening(false);
+            if (transcript) {
+                processTranscript(transcript);
+            }
+        };
+        
+        recognition.start();
+        
+        // Vibration feedback
+        if ('vibrate' in navigator) {
+            navigator.vibrate(200);
+        }
+    };
+    
+    const stopListening = () => {
+        if (recognition) {
+            recognition.stop();
+        }
+        setIsListening(false);
+    };
+    
+    // Update the processTranscript function in VoiceLoggingFAB to provide better error messages and suggestions
+    const processTranscript = async (text: string) => {
+        setIsProcessing(true);
+        
+        try {
+            // Send to Gemini AI for processing
+            const response = await fetch('/api/gemini-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    voiceTranscript: text,
+                    action: 'parse_workout_log'
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.exercises && data.exercises.length > 0) {
+                data.exercises.forEach((exercise: any) => {
+                    onLogSet(exercise.name, exercise.weight, exercise.reps);
+                });
+                
+                toast({
+                    title: 'Sets Logged Successfully!',
+                    description: `Logged ${data.exercises.length} set(s): ${data.exercises.map((e: any) => `${e.name} ${e.weight}kg × ${e.reps} reps`).join(', ')}`,
+                });
+            } else {
+                // Provide helpful suggestions based on what was said
+                const suggestions = getSuggestions(text);
+                toast({
+                    title: 'Could Not Parse Sets',
+                    description: suggestions,
+                    variant: 'destructive'
+                });
+            }
+        } catch (error) {
+            toast({
+                title: 'Processing Error',
+                description: 'Failed to process voice input. Please try again with clearer speech.',
+                variant: 'destructive'
+            });
+        } finally {
+            setIsProcessing(false);
+            setTranscript('');
+        }
+    };
+
+    // Add this helper function to provide better suggestions
+    const getSuggestions = (text: string) => {
+        const lowerText = text.toLowerCase();
+        
+        if (lowerText.includes('bench') || lowerText.includes('press')) {
+            return 'Try: "bench 40kg 15 reps" or "bench press 50kg 12 reps"';
+        }
+        if (lowerText.includes('curl')) {
+            return 'Try: "curl 20kg 15 reps" or "bicep curl 25kg 12 reps"';
+        }
+        if (lowerText.includes('row') || lowerText.includes('pulldown')) {
+            return 'Try: "row 30kg 15 reps" or "lat pulldown 40kg 12 reps"';
+        }
+        if (lowerText.includes('press') && !lowerText.includes('bench')) {
+            return 'Try: "shoulder press 30kg 12 reps" or "press 35kg 10 reps"';
+        }
+        if (lowerText.includes('fly')) {
+            return 'Try: "fly 15kg 15 reps" or "chest fly 20kg 12 reps"';
+        }
+        
+        return 'Try: "exercise name weight reps" (e.g., "bench 40kg 15 reps")';
+    };
+    
+    return (
+        <div className="fixed bottom-20 right-4 z-50">
+            <button
+                onClick={isListening ? stopListening : startListening}
+                disabled={isProcessing}
+                className={`w-16 h-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
+                    isListening 
+                        ? 'bg-red-500 hover:bg-red-600 pulse-glow' 
+                        : 'bg-accent hover:bg-accent/80 floating'
+                } ${isProcessing ? 'animate-pulse' : ''}`}
+            >
+                {isProcessing ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : isListening ? (
+                    <MicOff className="w-6 h-6 text-white" />
+                ) : (
+                    <Mic className="w-6 h-6 text-white" />
+                )}
+            </button>
+            {isListening && (
+                <div className="absolute bottom-20 right-0 bg-card p-3 rounded-lg shadow-lg border min-w-64">
+                    <p className="text-sm font-medium mb-2">Listening...</p>
+                    <p className="text-xs text-muted-foreground">{transcript || 'Speak your sets...'}</p>
+                </div>
+            )}
+        </div>
     );
 };
 
@@ -539,8 +697,15 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
             exerciseName={showStatsModal || ''}
             stats={performanceStats[showStatsModal || ''] || { personalBest: null, lastWeekSets: null }}
         />
+        <VoiceLoggingFAB onLogSet={(exercise, weight, reps) => {
+            handleAddSet(exercise, { reps, weight, timestamp: new Date().toISOString() });
+            toast({
+                title: 'Set Logged',
+                description: `${exercise}: ${weight}kg × ${reps} reps`,
+            });
+        }} />
 
-      <Card>
+      <Card className="card-hover">
         <CardHeader>
             <CardTitle className="text-2xl text-accent">{todaysWorkout.name}</CardTitle>
             <CardDescription>Day {dayOfProgram} of the Rebirth. Do not fail.</CardDescription>

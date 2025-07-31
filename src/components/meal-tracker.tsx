@@ -147,6 +147,17 @@ const HealthStatsDialog = () => {
                             className="w-full"
                         />
                     </div>
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Goal Weight: {userMetrics.goalWeight || 'N/A'} kg</label>
+                        <Slider
+                            value={[userMetrics.goalWeight || 0]}
+                            onValueChange={([value]) => setWeight(value)}
+                            min={30}
+                            max={200}
+                            step={0.5}
+                            className="w-full"
+                        />
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => setIsOpen(false)}>
@@ -202,7 +213,26 @@ const DailyTotalsCard = ({ totals }: { totals: { calories: number; protein: numb
 
 export function MealTracker() {
     const { toast } = useToast();
-    const { meals, logMeal } = useAppStore(state => ({ meals: state.meals, logMeal: state.logMeal }));
+    const { meals, logMeal, userMetrics, userId, _saveToFirestore } = useAppStore(state => ({ meals: state.meals, logMeal: state.logMeal, userMetrics: state.userMetrics, userId: state.userId, _saveToFirestore: state._saveToFirestore }));
+    const [goalWeight, setGoalWeight] = useState(userMetrics.goalWeight || '');
+    const [goalInput, setGoalInput] = useState(goalWeight);
+    const [savingGoal, setSavingGoal] = useState(false);
+    // Calculate suggested goal weight (BMI 22)
+    const suggestedGoal = userMetrics.height ? (22 * (userMetrics.height/100) * (userMetrics.height/100)).toFixed(1) : '';
+    const handleSaveGoal = async () => {
+        if (!userId) return;
+        setSavingGoal(true);
+        try {
+            await updateDoc(doc(db, 'users', userId), { userMetrics: { ...userMetrics, goalWeight: goalInput } });
+            _saveToFirestore({ userMetrics: { ...userMetrics, goalWeight: goalInput } });
+            setGoalWeight(goalInput);
+            toast({ title: 'Goal Weight Saved', description: `Your goal weight is now ${goalInput} kg.` });
+        } catch (e) {
+            toast({ title: 'Error', description: 'Could not save goal weight.', variant: 'destructive' });
+        } finally {
+            setSavingGoal(false);
+        }
+    };
     const [photoDataUri, setPhotoDataUri] = useState<string | null>(null);
     const [notes, setNotes] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -256,6 +286,9 @@ export function MealTracker() {
         }
     };
 
+    const goal = parseFloat(String(goalWeight || suggestedGoal || '0'));
+    const progress = Number.isFinite(goal) && goal > 30 ? Math.min(100, Math.max(0, ((userMetrics.weight - 30) / (goal - 30)) * 100)) : 0;
+
     return (
         <div className="p-4 space-y-6 animate-in fade-in-0 duration-500">
             {/* Header */}
@@ -267,20 +300,33 @@ export function MealTracker() {
                     Track your nutrition and monitor your health progress
                 </p>
             </div>
-
-            {/* Health Stats Update */}
+            {/* Health Stats Card */}
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <HeartPulse className="w-5 h-5 text-accent" />
-                        Health Management
+                        Your Health Stats
                     </CardTitle>
-                    <CardDescription>
-                        Keep your health metrics up to date for better AI recommendations
-                    </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <HealthStatsDialog />
+                    <div className="grid grid-cols-2 gap-4 items-center text-base mb-4">
+                        <div className="flex flex-col items-center">
+                            <span className="text-xs text-muted-foreground">Weight</span>
+                            <span className="font-bold text-2xl flex items-center gap-1"><Flame className="w-4 h-4 text-accent" />{userMetrics.weight} kg</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-xs text-muted-foreground">Body Fat</span>
+                            <span className="font-bold text-2xl">{userMetrics.bodyFat}%</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-xs text-muted-foreground">Height</span>
+                            <span className="font-bold text-2xl">{userMetrics.height} cm</span>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <span className="text-xs text-muted-foreground">Goal Weight</span>
+                            <span className="font-bold text-2xl text-primary">{goalWeight || suggestedGoal} kg</span>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 

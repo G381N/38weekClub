@@ -154,7 +154,7 @@ const AIResultCard = ({ exercise, result, personalBest }: { exercise: string; re
         <CollapsibleTrigger asChild>
           <div className="flex items-center justify-between cursor-pointer rounded-lg p-2 sm:p-3 transition-colors">
             <div className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-primary" />
+          <Target className="w-5 h-5 text-primary" />
               <h4 className="font-semibold text-primary text-base sm:text-lg">Recommended Workout Plan</h4>
             </div>
             {planExpanded ? (
@@ -162,25 +162,25 @@ const AIResultCard = ({ exercise, result, personalBest }: { exercise: string; re
             ) : (
               <ChevronDown className="w-5 h-5 text-muted-foreground" />
             )}
-          </div>
+        </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="grid gap-2 mt-2">
-            {result.recommendedPlan && result.recommendedPlan.length > 0 ? (
+        {result.recommendedPlan && result.recommendedPlan.length > 0 ? (
               result.recommendedPlan.map((set, i) => (
                 <div key={i} className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary">{i + 1}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="font-medium">Set {i + 1}</span>
-                      {set.note && <span className="text-xs text-muted-foreground">{set.note}</span>}
-                    </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <span className="text-sm font-bold text-primary">{i + 1}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Set {i + 1}</span>
+                    {set.note && <span className="text-xs text-muted-foreground">{set.note}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
                     <div className="text-accent font-bold">{set.weight}kg</div>
-                    <div className="text-muted-foreground">×</div>
+                  <div className="text-muted-foreground">×</div>
                     <div className="text-accent font-bold">{set.reps} reps</div>
                   </div>
                 </div>
@@ -220,21 +220,21 @@ const AIResultCard = ({ exercise, result, personalBest }: { exercise: string; re
       <Collapsible open={analysisExpanded} onOpenChange={setAnalysisExpanded}>
         <CollapsibleTrigger asChild>
           <div className="flex items-center gap-2 mb-3 cursor-pointer hover:bg-accent/5 transition-colors rounded-lg p-3">
-            <BarChart3 className="w-5 h-5 text-blue-400" />
-            <h4 className="font-semibold text-blue-400">AI Analysis</h4>
+          <BarChart3 className="w-5 h-5 text-blue-400" />
+          <h4 className="font-semibold text-blue-400">AI Analysis</h4>
             {analysisExpanded ? (
               <ChevronUp className="w-5 h-5 text-muted-foreground" />
             ) : (
               <ChevronDown className="w-5 h-5 text-muted-foreground" />
             )}
-          </div>
+        </div>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/10">
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {result.explanation}
-            </p>
-          </div>
+        <div className="p-4 rounded-lg bg-blue-500/5 border border-blue-500/10">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {result.explanation}
+          </p>
+        </div>
         </CollapsibleContent>
       </Collapsible>
 
@@ -245,41 +245,41 @@ const AIResultCard = ({ exercise, result, personalBest }: { exercise: string; re
         <Collapsible open={formExpanded} onOpenChange={setFormExpanded}>
           <CollapsibleTrigger asChild>
             <div className="flex items-center gap-2 mb-3 cursor-pointer hover:bg-accent/5 transition-colors rounded-lg p-3">
-              <Shield className="w-5 h-5 text-green-400" />
-              <h4 className="font-semibold text-green-400">Perfect Form Guide</h4>
+            <Shield className="w-5 h-5 text-green-400" />
+            <h4 className="font-semibold text-green-400">Perfect Form Guide</h4>
               {formExpanded ? (
                 <ChevronUp className="w-5 h-5 text-muted-foreground" />
               ) : (
                 <ChevronDown className="w-5 h-5 text-muted-foreground" />
               )}
-            </div>
+          </div>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="space-y-3">
-              <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/10">
-                <h5 className="font-medium text-green-400 mb-1">Setup</h5>
-                <p className="text-sm text-muted-foreground">{formTips.setup}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
-                <h5 className="font-medium text-blue-400 mb-1">Execution</h5>
-                <p className="text-sm text-muted-foreground">{formTips.execution}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
-                <h5 className="font-medium text-purple-400 mb-1">Breathing</h5>
-                <p className="text-sm text-muted-foreground">{formTips.breathing}</p>
-              </div>
-              <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10">
-                <h5 className="font-medium text-red-400 mb-1">Avoid These Mistakes</h5>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  {formTips.commonMistakes.map((mistake, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="text-red-400 mt-1">•</span>
-                      {mistake}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+          <div className="space-y-3">
+            <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/10">
+              <h5 className="font-medium text-green-400 mb-1">Setup</h5>
+              <p className="text-sm text-muted-foreground">{formTips.setup}</p>
             </div>
+            <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+              <h5 className="font-medium text-blue-400 mb-1">Execution</h5>
+              <p className="text-sm text-muted-foreground">{formTips.execution}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10">
+              <h5 className="font-medium text-purple-400 mb-1">Breathing</h5>
+              <p className="text-sm text-muted-foreground">{formTips.breathing}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10">
+              <h5 className="font-medium text-red-400 mb-1">Avoid These Mistakes</h5>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {formTips.commonMistakes.map((mistake, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="text-red-400 mt-1">•</span>
+                    {mistake}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
           </CollapsibleContent>
         </Collapsible>
       )}
@@ -558,29 +558,29 @@ export default function AIAnalysisPage() {
                     <Card className="hover:shadow-lg transition-all duration-200 p-2 sm:p-4 w-full max-w-full">
                       <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5 text-muted-foreground" />
+                            <TrendingUp className="w-5 h-5 text-muted-foreground" />
                           <h4 className="font-semibold text-base sm:text-lg">
                             {exercise}
                           </h4>
                         </div>
-                        <Button 
-                          onClick={() => fetchAndAnalyze(exercise)}
-                          disabled={loading === exercise}
-                          className="forged-button"
-                        >
-                          {loading === exercise ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Analyzing...
-                            </>
-                          ) : (
-                            <>
-                              <Brain className="w-4 h-4 mr-2" />
-                              Generate Analysis
-                              <ChevronRight className="w-4 h-4 ml-1" />
-                            </>
-                          )}
-                        </Button>
+                          <Button 
+                            onClick={() => fetchAndAnalyze(exercise)}
+                            disabled={loading === exercise}
+                            className="forged-button"
+                          >
+                            {loading === exercise ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Analyzing...
+                              </>
+                            ) : (
+                              <>
+                                <Brain className="w-4 h-4 mr-2" />
+                                Generate Analysis
+                                <ChevronRight className="w-4 h-4 ml-1" />
+                              </>
+                            )}
+                          </Button>
                       </CardHeader>
                       <CardContent>
                         <p className="text-muted-foreground text-sm">

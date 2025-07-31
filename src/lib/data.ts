@@ -28,8 +28,8 @@ export type WorkoutCategoryId = typeof workoutCategories[number]['id'];
 
 export const exercises: Record<WorkoutCategoryId, string[]> = {
   day1: [
-    'Flat Barbell Bench Press',
     'Chest Press Machine',
+    'Flat Barbell Bench Press',
     'Incline Barbell Press',
     'Chest Flies',
     'Barbell Curls (Straight Bar)',
