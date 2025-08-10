@@ -62,6 +62,15 @@ Choose your path:
 - **Intense Mode**: For warriors who demand maximum accountability
 - **Normal Mode**: Balanced approach for sustainable progress
 
+### 🏃 **Cardio Tracker**
+Integrated cardio tracking with multiple intensity modes:
+- **Newbie Mode**: Gentle introduction to cardio
+- **Confident Mode**: Balanced cardio sessions
+- **Beast Mode**: High-intensity training
+
+### 🏆 **Completion Certificate**
+Upon finishing your 38-week journey, receive a personalized digital certificate celebrating your transformation.
+
 ---
 
 ## 🏋️ **The Workout System**
@@ -96,11 +105,13 @@ Get started in minutes with our streamlined setup:
 Built specifically for gym environments:
 - Dark theme optimized for low-light conditions
 - Large touch targets for sweaty fingers
-- Offline capability for poor network areas
 - PWA installation for native app feel
 
 ### 🔄 **Real-Time Synchronization**
 Your data syncs instantly across all devices. Start a workout on your phone, finish it on your tablet.
+
+### 🎯 **AI Performance Insights**
+Get detailed analysis of your workout progression and nutrition patterns with advanced AI-powered insights.
 
 ---
 
@@ -163,32 +174,30 @@ Your transformation data is precious. We protect it with:
 |---------|-----|---------|---------|--------|
 | Voice Recognition | ✅ | ✅ | ✅ | Optimized |
 | Food Photography | ✅ | ✅ | ✅ | Native |
-| Offline Mode | ✅ | ✅ | ✅ | Full Support |
 | PWA Installation | ✅ | ✅ | ✅ | Available |
+| Real-time Sync | ✅ | ✅ | ✅ | Active |
 
 ---
 
 ## 🚀 **The Road Ahead**
 
 ### **Coming Soon**
-- **Wearable Integration**: Apple Watch and Garmin support
-- **Social Features**: Connect with fellow warriors
-- **Advanced Analytics**: Detailed performance insights
 - **Custom Workout Builder**: Create your own routines
+- **Enhanced Analytics**: More detailed performance insights
+- **Export Features**: Download your transformation data
 
 ### **The Vision**
 Building the ultimate transformation platform that combines proven fitness science with cutting-edge technology. Every feature is designed to remove friction from your journey while maintaining the discipline that creates warriors.
 
 ---
 
-## 💬 **Join the Community**
+## 💬 **Get In Touch**
 
-Ready to begin your rebirth? Connect with thousands of warriors already on their transformation journey:
+Ready to begin your rebirth? 
 
 - **📧 Email**: support@38weekclub.app
-- **💬 Discord**: [Join our community](https://discord.gg/38weekclub)
-- **📱 Twitter**: [@38WeekClub](https://twitter.com/38weekclub)
-- **🌐 Website**: [38weekclub.app](https://38weekclub.app)
+- **🌐 Website**: [38week-club.vercel.app](https://38week-club.vercel.app/)
+- **👨‍💻 Developer**: [gebin.net](https://gebin.net)
 
 ---
 
@@ -198,11 +207,11 @@ Ready to begin your rebirth? Connect with thousands of warriors already on their
 
 ### **38 weeks. 9 months. Complete transformation.**
 
-**[🚀 Start Your Journey](https://38weekclub.app) | [💬 Join Community](https://discord.gg/38weekclub)**
+**[🚀 Start Your Journey](https://38week-club.vercel.app)**
 
 ---
 
-**Made with 💪 by warriors, for warriors.**
+**Made with 💪 by [gebin.net](https://gebin.net)**
 
 **Remember: You don't know yourself until you've been forged by 38 weeks of discipline.**
 
