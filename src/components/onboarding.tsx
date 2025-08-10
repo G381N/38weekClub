@@ -131,7 +131,7 @@ export function Onboarding() {
   }>({});
   const completeOnboarding = useAppStore(state => state.completeOnboarding);
 
-  const handleNext = (data: any) => {
+  const handleNext = (data: Record<string, unknown>) => {
     setOnboardingData(prev => ({ ...prev, ...data }));
     setStep(s => s + 1);
   };

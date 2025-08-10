@@ -341,7 +341,11 @@ export default function AIAnalysisPage() {
       const weeksCol = collection(db, 'users', userId, 'workouts', varKey, 'weeks');
       const weekDocs = await getDocs(weeksCol);
       
-      const weekData: any[] = [];
+      const weekData: {
+        weekNumber: number;
+        startDate: string;
+        exercises: { name: string; sets: { reps: number; weight: number; timestamp: string }[] }[];
+      }[] = [];
       weekDocs.forEach(docSnap => {
         const data = docSnap.data();
         weekData.push({ 
@@ -464,8 +468,8 @@ export default function AIAnalysisPage() {
         description: `AI analysis for ${variation} has been generated`,
       });
 
-    } catch (e: any) {
-      const errorMessage = e.message || 'Failed to fetch AI analysis.';
+    } catch (e: unknown) {
+      const errorMessage = (e as Error).message || 'Failed to fetch AI analysis.';
       setError(errorMessage);
       toast({
         title: "Analysis Failed",

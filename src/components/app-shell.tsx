@@ -94,7 +94,7 @@ const GlobalRestTimer = ({ isOpen, onOpenChange }: { isOpen: boolean; onOpenChan
                         </div>
                     </div>
                     <div className="text-center h-20 flex flex-col justify-center items-center">
-                         <p className="text-muted-foreground italic text-sm transition-opacity duration-500">"{quote}"</p>
+                         <p className="text-muted-foreground italic text-sm transition-opacity duration-500">&ldquo;{quote}&rdquo;</p>
                          <p className="text-xs text-primary font-semibold mt-1 transition-opacity duration-500">- {author}</p>
                     </div>
                 </div>

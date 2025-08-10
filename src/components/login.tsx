@@ -87,7 +87,7 @@ const SignInForm = ({ onSwitch }: { onSwitch: () => void }) => {
                  {loading ? <Loader2 className="animate-spin" /> : "Sign In"}
             </Button>
              <p className="text-center text-sm text-muted-foreground">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <button type="button" onClick={onSwitch} className="font-semibold text-primary hover:underline">
                     Sign Up
                 </button>

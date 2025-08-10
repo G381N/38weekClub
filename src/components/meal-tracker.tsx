@@ -176,7 +176,7 @@ const HealthStatsDialog = () => {
 const DailyTotalsCard = ({ totals }: { totals: { calories: number; protein: number; carbs: number; fat: number } }) => (
     <Card>
         <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Target /> Today's Totals</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Target /> Today&apos;s Totals</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
             <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/30">
@@ -383,7 +383,7 @@ export function MealTracker() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Today's Log</CardTitle>
+                    <CardTitle>Today&apos;s Log</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-72">

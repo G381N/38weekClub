@@ -15,7 +15,7 @@ import { BrainCircuit, HeartPulse, Shield, Plus, CheckCircle, Flame, Dumbbell, R
 import { useToast } from '@/hooks/use-toast';
 import { isToday, parseISO, subDays, differenceInWeeks } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from './ui/dialog';
-import { type Set, type LastWeekSet, type PersonalBest } from '@/lib/types';
+import { type Set, type LastWeekSet, type PersonalBest, type WorkoutHistory, type WeeklyWorkoutData } from '@/lib/types';
 import { WheelPicker } from './ui/wheel-picker';
 import { db } from '@/lib/firebase';
 import { setDoc, doc, getDoc, updateDoc, collection, query, getDocs, deleteDoc } from 'firebase/firestore';
@@ -81,7 +81,7 @@ const StatsModal = ({
                     <div className="space-y-3">
                         <h3 className="font-semibold text-lg flex items-center gap-2">
                             <History className="w-5 h-5 text-blue-500" />
-                            Last Week's Sets
+                            Last Week&apos;s Sets
                         </h3>
                         {stats.lastWeekSets && stats.lastWeekSets.sets.length > 0 ? (
                             <div className="space-y-2">
@@ -196,7 +196,13 @@ const SetLoggerDialog = ({
     );
 };
 
-const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) => void; onOpenChange: (open: boolean) => void; open: boolean }) => {
+const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: {
+    sickButConsistent: boolean;
+    mood: number;
+    painLevel: number;
+    mentalDiscipline: number;
+    notes: string;
+}) => void; onOpenChange: (open: boolean) => void; open: boolean }) => {
     const [sickButConsistent, setSickButConsistent] = useState(false);
     const [beastState, setBeastState] = useState({ mood: 5, painLevel: 1, mentalDiscipline: 5 });
     const [notes, setNotes] = useState("");
@@ -263,11 +269,11 @@ const VoiceLoggingFAB = ({
     const recognition = useMemo(() => {
         if (typeof window !== 'undefined') {
             // Check for different speech recognition APIs
-            const SpeechRecognition = (window as any).SpeechRecognition || 
+            const speechRecognitionClass = (window as any).SpeechRecognition || 
                                       (window as any).webkitSpeechRecognition;
             
-            if (SpeechRecognition) {
-                const recognition = new SpeechRecognition();
+            if (speechRecognitionClass) {
+                const recognition = new speechRecognitionClass();
                 recognition.continuous = false; // Set to false for better iOS compatibility
                 recognition.interimResults = true;
                 recognition.lang = 'en-US';
@@ -290,26 +296,26 @@ const VoiceLoggingFAB = ({
         try {
             // For modern browsers that support permissions API
             if ('permissions' in navigator) {
-                const permission = await (navigator as any).permissions.query({ name: 'microphone' });
+                const permission = await (navigator as Navigator & {
+                    permissions: {
+                        query: (options: { name: string }) => Promise<PermissionStatus>;
+                    };
+                }).permissions.query({ name: 'microphone' });
                 setPermissionStatus(permission.state);
                 return permission.state === 'granted';
             }
             
             // Fallback: try to access getUserMedia to test permissions
-            if ('mediaDevices' in navigator && 'getUserMedia' in (navigator as any).mediaDevices) {
-                try {
-                    const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
-                    stream.getTracks().forEach((track: any) => track.stop()); // Clean up
-                    setPermissionStatus('granted');
-                    return true;
-                } catch (error) {
-                    console.warn('Microphone access denied:', error);
-                    setPermissionStatus('denied');
-                    return false;
-                }
+            try {
+                const stream = await (navigator as any).mediaDevices?.getUserMedia({ audio: true });
+                stream.getTracks().forEach((track: MediaStreamTrack) => track.stop()); // Clean up
+                setPermissionStatus('granted');
+                return true;
+            } catch (error) {
+                console.warn('Microphone access denied:', error);
+                setPermissionStatus('denied');
+                return false;
             }
-            
-            return true; // Assume granted if we can't check
         } catch (error) {
             console.error('Error checking microphone permission:', error);
             return true; // Assume granted if we can't check
@@ -341,7 +347,7 @@ const VoiceLoggingFAB = ({
         setTranscript('');
         
         // Enhanced error handling
-        recognition.onerror = (event: any) => {
+        recognition.onerror = (event: Event & { error?: string; message?: string }) => {
             console.error('Speech recognition error:', event.error);
             setIsListening(false);
             
@@ -368,7 +374,17 @@ const VoiceLoggingFAB = ({
             });
         };
         
-        recognition.onresult = (event: any) => {
+        recognition.onresult = (event: Event & {
+            results: {
+                [key: number]: {
+                    [key: number]: { transcript: string };
+                    isFinal: boolean;
+                    length: number;
+                };
+                length: number;
+            };
+            resultIndex: number;
+        }) => {
             let finalTranscript = '';
             let interimTranscript = '';
             
@@ -471,13 +487,17 @@ const VoiceLoggingFAB = ({
             const data = await response.json();
             
             if (data.exercises && data.exercises.length > 0) {
-                data.exercises.forEach((exercise: any) => {
+                data.exercises.forEach((exercise: {
+                    name: string;
+                    weight: number;
+                    reps: number;
+                }) => {
                     onLogSet(exercise.name, exercise.weight, exercise.reps);
                 });
                 
                 toast({
                     title: 'Sets Logged Successfully! 🎯',
-                    description: `Logged ${data.exercises.length} set(s): ${data.exercises.map((e: any) => `${e.name} ${e.weight}kg × ${e.reps} reps`).join(', ')}`,
+                    description: `Logged ${data.exercises.length} set(s): ${data.exercises.map((e: { name: string; weight: number; reps: number }) => `${e.name} ${e.weight}kg × ${e.reps} reps`).join(', ')}`,
                 });
             } else {
                 // Provide helpful suggestions based on what was said and available exercises
@@ -595,9 +615,9 @@ const VoiceLoggingFAB = ({
                     <p className="text-xs text-muted-foreground mb-2">{transcript || 'Speak your sets...'}</p>
                     <div className="text-xs text-muted-foreground">
                         <p className="font-medium mb-1">Say something like:</p>
-                        <p>• "I did bench press 45kg for 15 reps"</p>
-                        <p>• "Just finished curls 20kg 12 reps"</p>
-                        <p>• "Completed shoulder press 30kg 10 reps"</p>
+                        <p>• &ldquo;I did bench press 45kg for 15 reps&rdquo;</p>
+                        <p>• &ldquo;Just finished curls 20kg 12 reps&rdquo;</p>
+                        <p>• &ldquo;Completed shoulder press 30kg 10 reps&rdquo;</p>
                     </div>
                 </div>
             )}
@@ -637,10 +657,10 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
   const { user } = useAuth();
 
   // Utility to flatten workoutHistory into a flat array
-  const flattenWorkouts = (workoutHistory: any): Array<{ dayType: string; week: number; startDate: string; exercises: any[] }> => {
-    const all: Array<{ dayType: string; week: number; startDate: string; exercises: any[] }> = [];
+  const flattenWorkouts = (workoutHistory: WorkoutHistory): Array<{ dayType: string; week: number; startDate: string; exercises: { name: string; sets: { reps: number; weight: number; timestamp: string }[] }[] }> => {
+    const all: Array<{ dayType: string; week: number; startDate: string; exercises: { name: string; sets: { reps: number; weight: number; timestamp: string }[] }[] }> = [];
     Object.entries(workoutHistory).forEach(([dayType, weeks]) => {
-      (weeks as any[]).forEach((week: any) => {
+      weeks.forEach((week: WeeklyWorkoutData) => {
         all.push({
           dayType,
           week: week.weekNumber,
@@ -821,7 +841,13 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
     setShowMetricsModal(true);
   };
   
-  const handleSaveWorkout = async (details: any) => {
+  const handleSaveWorkout = async (details: {
+    sickButConsistent: boolean;
+    mood: number;
+    painLevel: number;
+    mentalDiscipline: number;
+    notes: string;
+  }) => {
     if (!todaysWorkout) return;
     
     const exercisesInSession = Object.values(sessionLog).filter(ex => ex.sets.length > 0);

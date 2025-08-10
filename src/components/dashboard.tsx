@@ -9,6 +9,7 @@ import { workoutCategories } from '@/lib/data';
 import { differenceInWeeks, startOfWeek } from 'date-fns';
 import { collection, setDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { WorkoutHistory, WeeklyWorkoutData } from '@/lib/types';
 
 export function Dashboard() {
   const { disciplineMode, startDate, workoutHistory, userId } = useAppStore(state => ({
@@ -33,10 +34,10 @@ export function Dashboard() {
   }, [userId]);
 
   // Utility to flatten workoutHistory into a flat array
-  const flattenWorkouts = (workoutHistory: any): Array<{ dayType: string; week: number; startDate: string; exercises: any[] }> => {
-    const all: Array<{ dayType: string; week: number; startDate: string; exercises: any[] }> = [];
+  const flattenWorkouts = (workoutHistory: WorkoutHistory): Array<{ dayType: string; week: number; startDate: string; exercises: { name: string; sets: { reps: number; weight: number; timestamp: string }[] }[] }> => {
+    const all: Array<{ dayType: string; week: number; startDate: string; exercises: { name: string; sets: { reps: number; weight: number; timestamp: string }[] }[] }> = [];
     Object.entries(workoutHistory).forEach(([dayType, weeks]) => {
-      (weeks as any[]).forEach((week: any) => {
+      weeks.forEach((week: WeeklyWorkoutData) => {
         all.push({
           dayType,
           week: week.weekNumber,
@@ -125,7 +126,7 @@ export function Dashboard() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Today's Target: {nextWorkoutCategory.name}</CardTitle>
+          <CardTitle>Today&apos;s Target: {nextWorkoutCategory.name}</CardTitle>
           <CardDescription>Focus. Execute. Overcome.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">

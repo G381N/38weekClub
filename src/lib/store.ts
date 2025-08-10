@@ -41,7 +41,7 @@ export const useAppStore = create<AppState>()(
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          set({ ...data as any, isInitialized: true });
+          set({ ...(data as Partial<AppState>), isInitialized: true });
         } else {
           set({ ...initialState, isInitialized: true });
         }
@@ -85,7 +85,7 @@ export const useAppStore = create<AppState>()(
         set((state) => {
           const prevWeeks = state.workoutHistory[dayType] || [];
           // Check if current week already exists
-          let weekIdx = prevWeeks.findIndex(w => w.startDate === weekStartDate);
+          const weekIdx = prevWeeks.findIndex(w => w.startDate === weekStartDate);
           let newWeeks = [...prevWeeks];
           if (weekIdx === -1) {
             // New week, add to front, remove oldest if >3
@@ -276,7 +276,7 @@ export const useAppStore = create<AppState>()(
         if (!docSnap.exists()) return;
         const data = docSnap.data();
         if (!data.meals) return;
-        const filteredMeals = data.meals.filter((meal: any) => meal.timestamp && meal.timestamp.slice(0, 10) === today);
+        const filteredMeals = data.meals.filter((meal: { timestamp?: string }) => meal.timestamp && meal.timestamp.slice(0, 10) === today);
         await setDoc(docRef, { meals: filteredMeals }, { merge: true });
       },
     }),
