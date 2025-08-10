@@ -214,8 +214,8 @@ const DailyTotalsCard = ({ totals }: { totals: { calories: number; protein: numb
 export function MealTracker() {
     const { toast } = useToast();
     const { meals, logMeal, userMetrics, userId, _saveToFirestore } = useAppStore(state => ({ meals: state.meals, logMeal: state.logMeal, userMetrics: state.userMetrics, userId: state.userId, _saveToFirestore: state._saveToFirestore }));
-    const [goalWeight, setGoalWeight] = useState(userMetrics.goalWeight || '');
-    const [goalInput, setGoalInput] = useState(goalWeight);
+    const [goalWeight, setGoalWeight] = useState(userMetrics.goalWeight || 0);
+    const [goalInput, setGoalInput] = useState(goalWeight.toString());
     const [savingGoal, setSavingGoal] = useState(false);
     // Calculate suggested goal weight (BMI 22)
     const suggestedGoal = userMetrics.height ? (22 * (userMetrics.height/100) * (userMetrics.height/100)).toFixed(1) : '';
@@ -223,9 +223,10 @@ export function MealTracker() {
         if (!userId) return;
         setSavingGoal(true);
         try {
-            await updateDoc(doc(db, 'users', userId), { userMetrics: { ...userMetrics, goalWeight: goalInput } });
-            _saveToFirestore({ userMetrics: { ...userMetrics, goalWeight: goalInput } });
-            setGoalWeight(goalInput);
+            const goalWeightNum = parseFloat(goalInput) || 0;
+            await updateDoc(doc(db, 'users', userId), { userMetrics: { ...userMetrics, goalWeight: goalWeightNum } });
+            _saveToFirestore({ userMetrics: { ...userMetrics, goalWeight: goalWeightNum } });
+            setGoalWeight(goalWeightNum);
             toast({ title: 'Goal Weight Saved', description: `Your goal weight is now ${goalInput} kg.` });
         } catch (e) {
             toast({ title: 'Error', description: 'Could not save goal weight.', variant: 'destructive' });

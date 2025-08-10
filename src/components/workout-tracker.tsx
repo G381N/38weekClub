@@ -60,10 +60,10 @@ const StatsModal = ({
                             <div className="p-4 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 rounded-lg border border-yellow-500/30">
                                 <div className="text-center">
                                     <p className="text-3xl font-bold text-yellow-600">
-                                        {stats.personalBest.weight} kg
+                                        {stats.personalBest.bestWeight} kg
                                     </p>
                                     <p className="text-lg text-muted-foreground">
-                                        × {stats.personalBest.reps} reps
+                                        × {stats.personalBest.bestReps} reps
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-2">
                                         Achieved: {new Date(stats.personalBest.achievedAt).toLocaleDateString()}
@@ -99,8 +99,8 @@ const StatsModal = ({
                             </div>
                         ) : stats.personalBest && stats.personalBest.achievedAt && differenceInWeeks(new Date(), parseISO(stats.personalBest.achievedAt)) < 1 ? (
                             <div className="p-4 bg-muted rounded-lg text-center">
-                                <p className="font-bold text-lg text-yellow-600">{stats.personalBest.weight} kg</p>
-                                <p className="text-lg text-muted-foreground">× {stats.personalBest.reps} reps</p>
+                                <p className="font-bold text-lg text-yellow-600">{stats.personalBest.bestWeight} kg</p>
+                                <p className="text-lg text-muted-foreground">× {stats.personalBest.bestReps} reps</p>
                                 <p className="text-xs text-muted-foreground mt-2">Achieved: {stats.personalBest.achievedAt}</p>
                             </div>
                         ) : (
@@ -246,55 +246,189 @@ const MetricsModal = ({ onSave, onOpenChange, open }: { onSave: (details: any) =
     );
 };
 
-const VoiceLoggingFAB = ({ onLogSet }: { onLogSet: (exercise: string, weight: number, reps: number) => void }) => {
+const VoiceLoggingFAB = ({ 
+    availableExercises, 
+    onLogSet 
+}: { 
+    availableExercises: string[];
+    onLogSet: (exercise: string, weight: number, reps: number) => void;
+}) => {
     const { toast } = useToast();
     const [isListening, setIsListening] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [transcript, setTranscript] = useState('');
+    const [permissionStatus, setPermissionStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
     
+    // Enhanced speech recognition with iOS Safari support
     const recognition = useMemo(() => {
-        if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-            const SpeechRecognition = (window as any).webkitSpeechRecognition;
-            const recognition = new SpeechRecognition();
-            recognition.continuous = true;
-            recognition.interimResults = true;
-            recognition.lang = 'en-US';
-            return recognition;
+        if (typeof window !== 'undefined') {
+            // Check for different speech recognition APIs
+            const SpeechRecognition = (window as any).SpeechRecognition || 
+                                      (window as any).webkitSpeechRecognition;
+            
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false; // Set to false for better iOS compatibility
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+                recognition.maxAlternatives = 1;
+                
+                // iOS-specific configurations
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    recognition.continuous = false;
+                    recognition.interimResults = false; // Better for iOS
+                }
+                
+                return recognition;
+            }
         }
         return null;
     }, []);
-    
-    const startListening = () => {
+
+    // Check microphone permissions
+    const checkMicrophonePermission = async (): Promise<boolean> => {
+        try {
+            // For modern browsers that support permissions API
+            if ('permissions' in navigator) {
+                const permission = await (navigator as any).permissions.query({ name: 'microphone' });
+                setPermissionStatus(permission.state);
+                return permission.state === 'granted';
+            }
+            
+            // Fallback: try to access getUserMedia to test permissions
+            if ('mediaDevices' in navigator && 'getUserMedia' in (navigator as any).mediaDevices) {
+                try {
+                    const stream = await (navigator as any).mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach((track: any) => track.stop()); // Clean up
+                    setPermissionStatus('granted');
+                    return true;
+                } catch (error) {
+                    console.warn('Microphone access denied:', error);
+                    setPermissionStatus('denied');
+                    return false;
+                }
+            }
+            
+            return true; // Assume granted if we can't check
+        } catch (error) {
+            console.error('Error checking microphone permission:', error);
+            return true; // Assume granted if we can't check
+        }
+    };
+
+    const startListening = async () => {
         if (!recognition) {
-            toast({ title: 'Voice Recognition Not Available', description: 'Your browser does not support voice recognition.', variant: 'destructive' });
+            toast({ 
+                title: 'Voice Recognition Not Available', 
+                description: 'Your browser does not support voice recognition. Please try using Chrome or Safari.', 
+                variant: 'destructive' 
+            });
+            return;
+        }
+
+        // Check microphone permissions first
+        const hasPermission = await checkMicrophonePermission();
+        if (!hasPermission) {
+            toast({ 
+                title: 'Microphone Permission Required', 
+                description: 'Please allow microphone access in your browser settings to use voice logging.', 
+                variant: 'destructive' 
+            });
             return;
         }
         
         setIsListening(true);
         setTranscript('');
         
+        // Enhanced error handling
+        recognition.onerror = (event: any) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+            
+            let errorMessage = 'Voice recognition failed. Please try again.';
+            switch (event.error) {
+                case 'no-speech':
+                    errorMessage = 'No speech detected. Please speak clearly and try again.';
+                    break;
+                case 'audio-capture':
+                    errorMessage = 'Microphone not accessible. Please check your settings.';
+                    break;
+                case 'not-allowed':
+                    errorMessage = 'Microphone permission denied. Please allow access and try again.';
+                    break;
+                case 'network':
+                    errorMessage = 'Network error. Please check your connection.';
+                    break;
+            }
+            
+            toast({ 
+                title: 'Voice Recognition Error', 
+                description: errorMessage, 
+                variant: 'destructive' 
+            });
+        };
+        
         recognition.onresult = (event: any) => {
             let finalTranscript = '';
+            let interimTranscript = '';
+            
             for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcriptPart = event.results[i][0].transcript;
                 if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
+                    finalTranscript += transcriptPart;
+                } else {
+                    interimTranscript += transcriptPart;
                 }
             }
-            setTranscript(finalTranscript);
+            
+            setTranscript(finalTranscript + interimTranscript);
+            
+            // Auto-process when we get final results
+            if (finalTranscript) {
+                setTranscript(finalTranscript);
+                setTimeout(() => {
+                    if (finalTranscript.trim()) {
+                        processTranscript(finalTranscript.trim());
+                    }
+                }, 500); // Small delay to ensure speech has ended
+            }
         };
         
         recognition.onend = () => {
             setIsListening(false);
-            if (transcript) {
-                processTranscript(transcript);
+            // Process transcript if we have one and haven't processed it yet
+            if (transcript && !isProcessing) {
+                processTranscript(transcript.trim());
             }
         };
+
+        recognition.onstart = () => {
+            console.log('Speech recognition started');
+        };
         
-        recognition.start();
-        
-        // Vibration feedback
-        if ('vibrate' in navigator) {
-            navigator.vibrate(200);
+        try {
+            recognition.start();
+            
+            // Vibration feedback
+            if ('vibrate' in navigator) {
+                navigator.vibrate(200);
+            }
+            
+            // Auto-stop after 10 seconds for better mobile experience
+            setTimeout(() => {
+                if (isListening && recognition) {
+                    recognition.stop();
+                }
+            }, 10000);
+            
+        } catch (error) {
+            console.error('Error starting speech recognition:', error);
+            setIsListening(false);
+            toast({ 
+                title: 'Voice Recognition Failed', 
+                description: 'Failed to start voice recognition. Please try again.', 
+                variant: 'destructive' 
+            });
         }
     };
     
@@ -307,18 +441,32 @@ const VoiceLoggingFAB = ({ onLogSet }: { onLogSet: (exercise: string, weight: nu
     
     // Update the processTranscript function in VoiceLoggingFAB to provide better error messages and suggestions
     const processTranscript = async (text: string) => {
+        if (!text || text.trim().length === 0) {
+            toast({
+                title: 'No Speech Detected',
+                description: 'Please speak clearly and try again.',
+                variant: 'destructive'
+            });
+            return;
+        }
+
         setIsProcessing(true);
         
         try {
-            // Send to Gemini AI for processing
+            // Send to Gemini AI for processing with available exercises context
             const response = await fetch('/api/gemini-analysis', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     voiceTranscript: text,
-                    action: 'parse_workout_log'
+                    action: 'parse_workout_log',
+                    availableExercises: availableExercises // Pass today's exercises for better matching
                 })
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const data = await response.json();
             
@@ -328,12 +476,12 @@ const VoiceLoggingFAB = ({ onLogSet }: { onLogSet: (exercise: string, weight: nu
                 });
                 
                 toast({
-                    title: 'Sets Logged Successfully!',
+                    title: 'Sets Logged Successfully! 🎯',
                     description: `Logged ${data.exercises.length} set(s): ${data.exercises.map((e: any) => `${e.name} ${e.weight}kg × ${e.reps} reps`).join(', ')}`,
                 });
             } else {
-                // Provide helpful suggestions based on what was said
-                const suggestions = getSuggestions(text);
+                // Provide helpful suggestions based on what was said and available exercises
+                const suggestions = getSuggestionsEnhanced(text, availableExercises);
                 toast({
                     title: 'Could Not Parse Sets',
                     description: suggestions,
@@ -341,6 +489,7 @@ const VoiceLoggingFAB = ({ onLogSet }: { onLogSet: (exercise: string, weight: nu
                 });
             }
         } catch (error) {
+            console.error('Error processing transcript:', error);
             toast({
                 title: 'Processing Error',
                 description: 'Failed to process voice input. Please try again with clearer speech.',
@@ -350,6 +499,43 @@ const VoiceLoggingFAB = ({ onLogSet }: { onLogSet: (exercise: string, weight: nu
             setIsProcessing(false);
             setTranscript('');
         }
+    };
+
+    // Enhanced helper function to provide better suggestions based on available exercises
+    const getSuggestionsEnhanced = (text: string, availableExercises: string[]) => {
+        const lowerText = text.toLowerCase();
+        
+        // Find the closest matching exercise from today's workout
+        const findClosestExercise = () => {
+            for (const exercise of availableExercises) {
+                const exerciseLower = exercise.toLowerCase();
+                const firstWord = exerciseLower.split(' ')[0];
+                
+                if (lowerText.includes(firstWord) || lowerText.includes(exerciseLower)) {
+                    return exercise;
+                }
+                
+                // Check for common variations
+                if (lowerText.includes('bench') && exerciseLower.includes('bench')) return exercise;
+                if (lowerText.includes('curl') && exerciseLower.includes('curl')) return exercise;
+                if (lowerText.includes('press') && exerciseLower.includes('press')) return exercise;
+                if (lowerText.includes('row') && exerciseLower.includes('row')) return exercise;
+                if (lowerText.includes('fly') && exerciseLower.includes('fly')) return exercise;
+                if (lowerText.includes('extension') && exerciseLower.includes('extension')) return exercise;
+                if (lowerText.includes('raise') && exerciseLower.includes('raise')) return exercise;
+            }
+            return null;
+        };
+        
+        const closestExercise = findClosestExercise();
+        
+        if (closestExercise) {
+            return `Try: "I did ${closestExercise} 40kg for 15 reps" or "Just finished ${closestExercise} 50kg 12 reps"`;
+        }
+        
+        // Fallback to showing available exercises
+        const firstThreeExercises = availableExercises.slice(0, 3);
+        return `Today's exercises: ${firstThreeExercises.join(', ')}. Try: "I did [exercise] [weight]kg [reps] reps"`;
     };
 
     // Add this helper function to provide better suggestions
@@ -383,21 +569,42 @@ const VoiceLoggingFAB = ({ onLogSet }: { onLogSet: (exercise: string, weight: nu
                 className={`w-16 h-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
                     isListening 
                         ? 'bg-red-500 hover:bg-red-600 pulse-glow' 
+                        : permissionStatus === 'denied'
+                        ? 'bg-gray-500 hover:bg-gray-600'
                         : 'bg-accent hover:bg-accent/80 floating'
                 } ${isProcessing ? 'animate-pulse' : ''}`}
+                title={
+                    permissionStatus === 'denied' 
+                        ? 'Microphone access denied' 
+                        : isListening 
+                        ? 'Stop listening' 
+                        : 'Start voice logging'
+                }
             >
                 {isProcessing ? (
                     <Loader2 className="w-6 h-6 text-white animate-spin" />
                 ) : isListening ? (
                     <MicOff className="w-6 h-6 text-white" />
                 ) : (
-                    <Mic className="w-6 h-6 text-white" />
+                    <Mic className={`w-6 h-6 text-white ${permissionStatus === 'denied' ? 'opacity-50' : ''}`} />
                 )}
             </button>
             {isListening && (
-                <div className="absolute bottom-20 right-0 bg-card p-3 rounded-lg shadow-lg border min-w-64">
-                    <p className="text-sm font-medium mb-2">Listening...</p>
-                    <p className="text-xs text-muted-foreground">{transcript || 'Speak your sets...'}</p>
+                <div className="absolute bottom-20 right-0 bg-card p-3 rounded-lg shadow-lg border min-w-72 max-w-80">
+                    <p className="text-sm font-medium mb-2 text-green-600">🎤 Listening...</p>
+                    <p className="text-xs text-muted-foreground mb-2">{transcript || 'Speak your sets...'}</p>
+                    <div className="text-xs text-muted-foreground">
+                        <p className="font-medium mb-1">Say something like:</p>
+                        <p>• "I did bench press 45kg for 15 reps"</p>
+                        <p>• "Just finished curls 20kg 12 reps"</p>
+                        <p>• "Completed shoulder press 30kg 10 reps"</p>
+                    </div>
+                </div>
+            )}
+            {permissionStatus === 'denied' && !isListening && (
+                <div className="absolute bottom-20 right-0 bg-red-50 border border-red-200 p-3 rounded-lg shadow-lg min-w-64">
+                    <p className="text-sm font-medium text-red-800 mb-1">Microphone Access Denied</p>
+                    <p className="text-xs text-red-600">Please enable microphone access in your browser settings to use voice logging.</p>
                 </div>
             )}
         </div>
@@ -529,7 +736,7 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
       const varKey = exerciseName.replace(/[\s\/]+/g, '_');
       const weeksCol = collection(db, 'users', user.uid, 'workouts', varKey, 'weeks');
       const weekDocs = await getDocs(weeksCol);
-      const weekEntries = [];
+      const weekEntries: Array<{id: string, week: number}> = [];
       weekDocs.forEach(docSnap => {
         const data = docSnap.data();
         weekEntries.push({ id: docSnap.id, week: data.week });
@@ -561,22 +768,31 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
         const varKey = exerciseName.replace(/[\s\/]+/g, '_');
         const pbSnap = await getDoc(doc(db, 'users', user.uid, 'workouts', varKey, 'meta', 'personal_best'));
         const weekSnap = await getDoc(doc(db, 'users', user.uid, 'workouts', varKey, 'weeks', `week_${weekOfProgram - 1}`));
-        let pb = null;
+        let pb: PersonalBest | null = null;
         if (pbSnap.exists()) {
           const d = pbSnap.data();
           pb = {
-            weight: d.weight || d.bestWeight || '',
-            reps: d.reps || d.bestReps || '',
+            id: pbSnap.id,
+            userId: user.uid,
+            exerciseName: exerciseName,
+            bestWeight: d.weight || d.bestWeight || 0,
+            bestReps: d.reps || d.bestReps || 0,
             achievedAt: d.achievedAt || d.timestamp || '',
+            createdAt: d.createdAt || '',
+            updatedAt: d.updatedAt || '',
           };
         }
-        let lastWeekSets = null;
+        let lastWeekSets: LastWeekSet | null = null;
         if (weekSnap.exists()) {
           const d = weekSnap.data();
           lastWeekSets = {
+            id: weekSnap.id,
+            userId: user.uid,
+            exerciseName: exerciseName,
             sets: d.sets || [],
-            weekNumber: d.week || '',
-            startDate: d.startDate || '',
+            weekNumber: d.week || 0,
+            createdAt: d.createdAt || '',
+            updatedAt: d.updatedAt || '',
           };
         }
         stats[exerciseName] = {
@@ -697,13 +913,16 @@ export function WorkoutTracker({ onStartTimer }: { onStartTimer: () => void }) {
             exerciseName={showStatsModal || ''}
             stats={performanceStats[showStatsModal || ''] || { personalBest: null, lastWeekSets: null }}
         />
-        <VoiceLoggingFAB onLogSet={(exercise, weight, reps) => {
-            handleAddSet(exercise, { reps, weight, timestamp: new Date().toISOString() });
-            toast({
-                title: 'Set Logged',
-                description: `${exercise}: ${weight}kg × ${reps} reps`,
-            });
-        }} />
+        <VoiceLoggingFAB 
+            availableExercises={todaysWorkout.exercises}
+            onLogSet={(exercise, weight, reps) => {
+                handleAddSet(exercise, { reps, weight, timestamp: new Date().toISOString() });
+                toast({
+                    title: 'Set Logged via Voice! 🎤',
+                    description: `${exercise}: ${weight}kg × ${reps} reps`,
+                });
+            }} 
+        />
 
       <Card className="card-hover">
         <CardHeader>
